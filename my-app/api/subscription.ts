@@ -1,7 +1,10 @@
 class SubscriptionAPI {
   private baseURL: string;
 
-  constructor(baseURL: string = "http://localhost:9090") {
+  constructor(
+    baseURL: string = process.env.NEXT_PUBLIC_GRPC_GATEWAY_URL_SUB ||
+      "http://localhost:9090"
+  ) {
     this.baseURL = baseURL;
   }
 
@@ -9,13 +12,16 @@ class SubscriptionAPI {
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
-    const token = localStorage.getItem("authToken");
+    const token =
+      typeof window !== "undefined"
+        ? localStorage.getItem("accessToken")
+        : null;
 
     const response = await fetch(`${this.baseURL}${endpoint}`, {
       ...options,
       headers: {
         "Content-Type": "application/json",
-        Authorization: token ? `Bearer ${token}` : "",
+        ...(token && { Authorization: `Bearer ${token}` }),
         ...options.headers,
       },
     });
@@ -91,4 +97,26 @@ class SubscriptionAPI {
   }
 }
 
-export const subscriptionAPI = new SubscriptionAPI("http://localhost:9090");
+// Import interfaces
+interface Plan {
+  plan_id: number;
+  name: string;
+  description?: string;
+  rental_limit: number;
+  price: number;
+  duration: string;
+}
+
+interface Subscription {
+  user_id: number;
+  plan_id: number;
+  plan_name: string;
+  remaining_limit: number;
+  expires_at: string;
+}
+
+interface SubscriptionStatus {
+  sub_status: boolean;
+}
+
+export const subscriptionAPI = new SubscriptionAPI();

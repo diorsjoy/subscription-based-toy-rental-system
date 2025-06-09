@@ -34,11 +34,6 @@ export function Navigation() {
   const { user, isAuthenticated, logout, isLoading } = useAuth();
   const { t, currentLanguage } = useTranslation();
 
-  // Debug: Log current language and a test translation
-  console.log("Current language:", currentLanguage);
-  console.log("Test translation 'nav.browse':", t("nav.browse"));
-  console.log("Test translation 'nav.profile':", t("nav.profile"));
-
   const navItems = [
     { name: t("nav.browse"), href: "/browse", key: "browse" },
     { name: t("nav.howItWorks"), href: "/how-it-works", key: "howItWorks" },
@@ -62,9 +57,6 @@ export function Navigation() {
       key: "settings",
     },
   ];
-
-  console.log("Nav items:", navItems);
-  console.log("User menu items:", userMenuItems);
 
   const handleLogout = async () => {
     try {

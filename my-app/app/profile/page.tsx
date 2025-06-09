@@ -102,13 +102,6 @@ export default function ProfilePage() {
     return user?.tokensBalance || 0;
   };
 
-  const getJoinDate = () => {
-    if (user?.joinDate) {
-      return new Date(user.joinDate).toLocaleDateString();
-    }
-    return "Recently";
-  };
-
   if (isLoading) {
     return (
       <div className="flex flex-col min-h-screen">

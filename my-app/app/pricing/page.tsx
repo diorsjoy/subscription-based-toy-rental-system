@@ -1,7 +1,6 @@
 import { Navigation } from "@/components/navigation";
 import { Footer } from "@/components/footer";
-import { PricingPlans } from "@/components/pricing-plans";
-import { FAQ } from "@/components/faq";
+import { SubscriptionPlans } from "@/components/subscription/SubscriptionPlans";
 
 export default function PricingPage() {
   return (
@@ -10,10 +9,9 @@ export default function PricingPage() {
       <main className="flex-1">
         <section className="py-16 px-6">
           <div className="max-w-7xl mx-auto">
-            <PricingPlans />
+            <SubscriptionPlans />
           </div>
         </section>
-        <FAQ />
       </main>
       <Footer />
     </div>
