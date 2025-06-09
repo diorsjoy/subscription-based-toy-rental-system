@@ -1,925 +1,679 @@
-// app/toy-details/page.tsx
+// app/toy-details/page.tsx - Real API Integration
 "use client";
-
+import { useRouter, useSearchParams } from "next/navigation";
 import { Navigation } from "@/components/navigation";
 import { Footer } from "@/components/footer";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { useState, useEffect, Suspense } from "react";
 import { useCart } from "@/components/cart";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/lib/contexts/AuthContext";
 import { motion } from "framer-motion";
 import {
-  Star,
-  Heart,
-  Share2,
-  Clock,
-  Users,
-  Zap,
   ArrowLeft,
-  CheckCircle,
-  AlertCircle,
-  Calendar,
+  Heart,
+  Star,
+  Share2,
+  ShoppingCart,
+  Zap,
+  Package,
+  Users,
+  Clock,
   Award,
-  Target,
-  BookOpen,
-  Palette,
-  Music,
-  Car,
-  Calculator,
-  Grid,
-  ShieldCheck,
+  Shield,
   Truck,
-  RotateCcw,
-  MessageCircle,
-  ThumbsUp,
+  RefreshCw,
+  Camera,
+  ChevronLeft,
+  ChevronRight,
+  AlertCircle,
+  CheckCircle,
+  Info,
+  Building,
+  Calendar,
+  Target,
+  Lightbulb,
 } from "lucide-react";
-import Image from "next/image";
-import { useSearchParams, useRouter } from "next/navigation";
+import { ToyImage } from "@/components/CustomImage";
 
+// Remove the regular img import since we're using custom component
+
+// API Types matching your backend
 interface Toy {
   id: number;
   title: string;
-  description: string;
-  ageRange: string;
-  ageMin: number;
-  ageMax: number;
-  category: string;
-  rating: number;
-  tokens: number;
-  image: string;
-  isNew?: boolean;
-  isFeatured?: boolean;
-  difficulty: "Easy" | "Medium" | "Hard";
-  playTime: string;
-  playerCount: string;
+  desc: string;
+  value: number;
+  images: string[];
   skills: string[];
-  brand: string;
-  availability: "Available" | "Limited" | "Coming Soon";
-  detailedDescription?: string;
-  features?: string[];
-  dimensions?: string;
-  weight?: string;
-  materials?: string[];
-  safetyInfo?: string[];
-  careInstructions?: string[];
-  rentalPeriods?: {
-    period: string;
-    tokens: number;
-    popular?: boolean;
-  }[];
-  reviews?: {
-    id: number;
-    userName: string;
-    rating: number;
-    comment: string;
-    date: string;
-    helpful: number;
-  }[];
-  relatedToys?: number[];
+  categories: string[];
+  recommendedAge: string;
+  manufacturer: string;
+  isAvailable: boolean;
 }
 
-const detailedToys: Toy[] = [
-  {
-    id: 1,
-    title: "LEGO Architecture Burj Khalifa",
-    description:
-      "Build the world's tallest building with this detailed LEGO set featuring authentic architectural details.",
-    detailedDescription:
-      "Experience the architectural marvel of Dubai's iconic Burj Khalifa with this meticulously designed LEGO set. Standing over 39 inches tall when complete, this model captures the essence of the world's tallest building with incredible attention to detail.",
-    ageRange: "12+ years",
-    ageMin: 12,
-    ageMax: 99,
-    category: "building",
-    rating: 4.9,
-    tokens: 85,
-    image: "/images/lego-dog.png",
-    isNew: true,
-    isFeatured: true,
-    difficulty: "Hard",
-    playTime: "4-6 hours",
-    playerCount: "1-2 players",
-    skills: ["Engineering", "Patience", "Attention to Detail", "Architecture"],
-    brand: "LEGO",
-    availability: "Available",
-    features: [
-      "Over 333 pieces included",
-      "Detailed instruction booklet",
-      "Authentic architectural proportions",
-      "Displayable base with nameplate",
-      "Premium building experience",
-    ],
-    dimensions: "8 x 8 x 39 inches when built",
-    weight: "1.2 kg",
-    materials: ["High-quality ABS plastic", "Paper instruction manual"],
-    safetyInfo: [
-      "Not suitable for children under 3 years",
-      "Contains small parts - choking hazard",
-      "Adult supervision recommended for ages 3-12",
-    ],
-    careInstructions: [
-      "Clean with damp cloth only",
-      "Do not submerge in water",
-      "Store in dry place",
-      "Handle with care to prevent breakage",
-    ],
-    rentalPeriods: [
-      { period: "3 days", tokens: 25 },
-      { period: "1 week", tokens: 45, popular: true },
-      { period: "2 weeks", tokens: 85 },
-      { period: "1 month", tokens: 150 },
-    ],
-    reviews: [
-      {
-        id: 1,
-        userName: "ArchitectureFan23",
-        rating: 5,
-        comment:
-          "Absolutely stunning build! The detail is incredible and it looks amazing on my shelf. Worth every token!",
-        date: "2024-12-15",
-        helpful: 12,
-      },
-      {
-        id: 2,
-        userName: "LEGOMaster",
-        rating: 5,
-        comment:
-          "Challenging but rewarding build. Great quality pieces and clear instructions.",
-        date: "2024-12-10",
-        helpful: 8,
-      },
-    ],
-    relatedToys: [2, 3, 6],
-  },
-  {
-    id: 2,
-    title: "Melissa & Doug Deluxe Kitchen Set",
-    description:
-      "Complete wooden kitchen playset with realistic sounds, lights, and 25+ accessories.",
-    detailedDescription:
-      "Transform playtime into culinary adventures with this premium wooden kitchen set. Featuring realistic sounds, LED lights, and over 25 accessories, this kitchen provides endless opportunities for creative play.",
-    ageRange: "3-8 years",
-    ageMin: 3,
-    ageMax: 8,
-    category: "pretend",
-    rating: 4.8,
-    tokens: 75,
-    image: "/placeholder.svg?height=600&width=600",
-    isFeatured: true,
-    difficulty: "Easy",
-    playTime: "1-3 hours",
-    playerCount: "1-4 players",
-    skills: ["Imagination", "Social Skills", "Role Play", "Fine Motor Skills"],
-    brand: "Melissa & Doug",
-    availability: "Available",
-    features: [
-      "Realistic cooking sounds and lights",
-      "25+ play accessories included",
-      "Sustainable wood construction",
-      "Child-safe, non-toxic finishes",
-      "Easy assembly with included tools",
-    ],
-    dimensions: "43 x 37 x 109 cm",
-    weight: "15 kg",
-    materials: ["Sustainable wood", "Non-toxic paint", "Electronic components"],
-    safetyInfo: [
-      "Suitable for ages 3 and up",
-      "Meets all safety standards",
-      "Rounded edges for safety",
-      "Stable construction",
-    ],
-    careInstructions: [
-      "Wipe clean with damp cloth",
-      "Avoid harsh chemicals",
-      "Check electronic components regularly",
-      "Store in dry environment",
-    ],
-    rentalPeriods: [
-      { period: "3 days", tokens: 22 },
-      { period: "1 week", tokens: 40, popular: true },
-      { period: "2 weeks", tokens: 75 },
-      { period: "1 month", tokens: 130 },
-    ],
-    reviews: [
-      {
-        id: 1,
-        userName: "PlayMom",
-        rating: 5,
-        comment:
-          "My daughter absolutely loves this kitchen! The sounds and lights make it so realistic. Great quality too.",
-        date: "2024-12-18",
-        helpful: 15,
-      },
-    ],
-    relatedToys: [4, 5],
-  },
-  {
-    id: 3,
-    title: "National Geographic Break Open Geodes Kit",
-    description:
-      "Crack open real geodes to discover beautiful crystals inside. Includes safety goggles and learning guide.",
-    detailedDescription:
-      "Embark on a geological adventure with this authentic geode kit from National Geographic. Each kit contains 10 real geodes waiting to be cracked open to reveal stunning crystals inside.",
-    ageRange: "6-12 years",
-    ageMin: 6,
-    ageMax: 12,
-    category: "stem",
-    rating: 4.7,
-    tokens: 55,
-    image: "/placeholder.svg?height=600&width=600",
-    isNew: true,
-    difficulty: "Medium",
-    playTime: "2-4 hours",
-    playerCount: "1-3 players",
-    skills: ["Science", "Discovery", "Geology", "Observation"],
-    brand: "National Geographic",
-    availability: "Limited",
-    features: [
-      "10 authentic geodes included",
-      "Safety goggles and tools",
-      "Full-color learning guide",
-      "Magnifying glass included",
-      "Display stand for crystals",
-    ],
-    dimensions: "30 x 20 x 8 cm",
-    weight: "1.5 kg",
-    materials: ["Natural geodes", "Safety equipment", "Educational materials"],
-    safetyInfo: [
-      "Adult supervision required",
-      "Always wear safety goggles",
-      "Use tools carefully",
-      "Work in well-ventilated area",
-    ],
-    careInstructions: [
-      "Store tools in provided case",
-      "Keep crystals in dry place",
-      "Handle with care",
-      "Clean tools after use",
-    ],
-    rentalPeriods: [
-      { period: "3 days", tokens: 15 },
-      { period: "1 week", tokens: 30, popular: true },
-      { period: "2 weeks", tokens: 55 },
-      { period: "1 month", tokens: 95 },
-    ],
-    reviews: [
-      {
-        id: 1,
-        userName: "ScienceMom",
-        rating: 5,
-        comment:
-          "Amazing educational experience! My son learned so much about geology while having fun.",
-        date: "2024-12-20",
-        helpful: 18,
-      },
-    ],
-    relatedToys: [1, 6],
-  },
-];
+// Backend API integration
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_GRPC_GATEWAY_URL1 || "http://localhost:3030";
 
-const categoryIcons: { [key: string]: JSX.Element } = {
-  building: <Grid className="w-4 h-4" />,
-  pretend: <Users className="w-4 h-4" />,
-  stem: <Calculator className="w-4 h-4" />,
-  arts: <Palette className="w-4 h-4" />,
-  music: <Music className="w-4 h-4" />,
-  vehicles: <Car className="w-4 h-4" />,
-  educational: <BookOpen className="w-4 h-4" />,
+const useApiHeaders = () => {
+  const { user } = useAuth();
+
+  const getAuthToken = (): string | null => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("accessToken");
+    }
+    return null;
+  };
+
+  return (): Record<string, string> => {
+    const token = getAuthToken();
+    return {
+      "Content-Type": "application/json",
+      ...(token && { Authorization: `Bearer ${token}` }),
+    };
+  };
 };
 
-export default function ToyDetailPage() {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const toyId = searchParams.get("id");
-  const [currentToy, setCurrentToy] = useState<Toy | null>(null);
-  const [activeTab, setActiveTab] = useState<"overview" | "reviews" | "rental">(
-    "overview"
-  );
-  const [selectedRentalPeriod, setSelectedRentalPeriod] =
-    useState<string>("1 week");
-  const [wishlist, setWishlist] = useState<number[]>([]);
-  const [imageLoading, setImageLoading] = useState(true);
+const createToyAPI = (getHeaders: () => Record<string, string>) => ({
+  getToy: async (toyId: number): Promise<{ toy: Toy }> => {
+    const response = await fetch(`${API_BASE_URL}/toys/${toyId}`, {
+      method: "GET",
+      headers: getHeaders(),
+    });
 
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error("Toy not found");
+      }
+      throw new Error(`Failed to fetch toy: ${response.status}`);
+    }
+    return response.json();
+  },
+});
+
+// Main component wrapped in Suspense boundary
+function ToyDetailsContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const toyId = searchParams.get("id");
   const { addItem } = useCart();
   const { toast } = useToast();
+  const getHeaders = useApiHeaders();
+  const toyAPI = createToyAPI(getHeaders);
 
+  // State
+  const [toy, setToy] = useState<Toy | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isWishlisted, setIsWishlisted] = useState(false);
+  const [quantity, setQuantity] = useState(1);
+
+  // Load toy data
   useEffect(() => {
     if (toyId) {
-      const toy = detailedToys.find((t) => t.id === parseInt(toyId));
-      if (toy) {
-        setCurrentToy(toy);
-        const popularPeriod = toy.rentalPeriods?.find((p) => p.popular);
-        if (popularPeriod) {
-          setSelectedRentalPeriod(popularPeriod.period);
-        }
-      } else {
-        setCurrentToy(detailedToys[0]);
-      }
+      loadToy(parseInt(toyId));
     } else {
-      setCurrentToy(detailedToys[0]);
+      setError("No toy ID provided");
+      setLoading(false);
     }
   }, [toyId]);
 
-  const toggleWishlist = (id: number) => {
-    setWishlist((prev) =>
-      prev.includes(id) ? prev.filter((itemId) => itemId !== id) : [...prev, id]
-    );
+  const loadToy = async (id: number): Promise<void> => {
+    setLoading(true);
+    setError("");
+
+    try {
+      const response = await toyAPI.getToy(id);
+      setToy(response.toy);
+
+      // Check if toy is in wishlist (from localStorage)
+      const wishlist = JSON.parse(localStorage.getItem("wishlist") || "[]");
+      setIsWishlisted(wishlist.includes(id));
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Unknown error occurred";
+      setError(errorMessage);
+      toast({
+        title: "Error Loading Toy",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddToCart = () => {
+    if (!toy) return;
+
+    const cartItem = {
+      id: toy.id,
+      title: toy.title,
+      description: toy.desc,
+      ageRange: toy.recommendedAge,
+      category: toy.categories[0] || "General",
+      rating: 4.5, // Default rating
+      tokens: toy.value,
+      image: toy.images[0] || "/placeholder.svg",
+      quantity,
+    };
+
+    for (let i = 0; i < quantity; i++) {
+      addItem(cartItem);
+    }
 
     toast({
-      title: wishlist.includes(id)
-        ? "Removed from Wishlist"
-        : "Added to Wishlist",
-      description: `Toy ${
-        wishlist.includes(id) ? "removed from" : "added to"
+      title: `Added ${quantity}x to Cart! 🛒`,
+      description: `${toy.title} has been added to your cart.`,
+    });
+  };
+
+  const handleQuickRent = () => {
+    if (!toy) return;
+
+    handleAddToCart();
+    toast({
+      title: "Quick Rent Started! ⚡",
+      description: `${toy.title} - proceeding to checkout.`,
+    });
+
+    router.push("/checkout");
+  };
+
+  const toggleWishlist = () => {
+    if (!toy) return;
+
+    const wishlist = JSON.parse(localStorage.getItem("wishlist") || "[]");
+    let newWishlist;
+
+    if (isWishlisted) {
+      newWishlist = wishlist.filter((id: number) => id !== toy.id);
+    } else {
+      newWishlist = [...wishlist, toy.id];
+    }
+
+    localStorage.setItem("wishlist", JSON.stringify(newWishlist));
+    setIsWishlisted(!isWishlisted);
+
+    toast({
+      title: isWishlisted ? "Removed from Wishlist" : "Added to Wishlist",
+      description: `${toy.title} ${
+        isWishlisted ? "removed from" : "added to"
       } your wishlist.`,
     });
   };
 
-  const handleAddToCart = (toy: Toy) => {
-    const rentalPeriod = toy.rentalPeriods?.find(
-      (p) => p.period === selectedRentalPeriod
-    );
-    const cartItem = {
-      id: toy.id,
-      title: toy.title,
-      description: toy.description,
-      ageRange: toy.ageRange,
-      category: toy.category,
-      rating: toy.rating,
-      tokens: rentalPeriod?.tokens || toy.tokens,
-      image: toy.image,
-      rentalPeriod: selectedRentalPeriod,
-    };
+  const handleShare = async () => {
+    if (!toy) return;
 
-    addItem(cartItem);
-    toast({
-      title: "Added to Cart! 🛒",
-      description: `${toy.title} (${selectedRentalPeriod}) has been added to your cart.`,
-    });
-  };
-
-  const handleShare = () => {
-    if (navigator.share && currentToy) {
-      navigator.share({
-        title: currentToy.title,
-        text: currentToy.description,
-        url: window.location.href,
-      });
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: toy.title,
+          text: toy.desc,
+          url: window.location.href,
+        });
+      } catch (err) {
+        // User cancelled or error occurred
+      }
     } else {
-      navigator.clipboard.writeText(window.location.href);
+      // Fallback: copy to clipboard
+      await navigator.clipboard.writeText(window.location.href);
       toast({
         title: "Link Copied!",
-        description: "Toy page link copied to clipboard.",
+        description: "Share link has been copied to clipboard.",
       });
     }
   };
 
-  if (!currentToy) {
+  const nextImage = () => {
+    if (!toy?.images.length) return;
+    setCurrentImageIndex((prev) =>
+      prev === toy.images.length - 1 ? 0 : prev + 1
+    );
+  };
+
+  const prevImage = () => {
+    if (!toy?.images.length) return;
+    setCurrentImageIndex((prev) =>
+      prev === 0 ? toy.images.length - 1 : prev - 1
+    );
+  };
+
+  // Loading state
+  if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p>Loading toy details...</p>
-        </div>
+      <div className="min-h-screen flex flex-col">
+        <Navigation />
+        <main className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4" />
+            <p className="text-gray-600">Loading toy details...</p>
+          </div>
+        </main>
+        <Footer />
       </div>
     );
   }
 
-  const selectedRental = currentToy.rentalPeriods?.find(
-    (p) => p.period === selectedRentalPeriod
-  );
-  const relatedToys = detailedToys.filter((toy) =>
-    currentToy.relatedToys?.includes(toy.id)
-  );
+  // Error state
+  if (error || !toy) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navigation />
+        <main className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              Toy Not Found
+            </h2>
+            <p className="text-gray-600 mb-6">
+              {error || "The toy you're looking for doesn't exist."}
+            </p>
+            <Button onClick={() => router.push("/browse")}>
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Browse
+            </Button>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
-      <div className="fixed inset-0 z-0 pointer-events-none futuristic-grid-bg" />
-
       <Navigation />
-      <main className="flex-1 relative z-10">
+      <main className="flex-1">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <Button
-            variant="ghost"
-            onClick={() => router.back()}
-            className="mb-6 hover:bg-blue-50"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Browse
-          </Button>
+          {/* Breadcrumb */}
+          <div className="flex items-center gap-2 text-sm text-gray-500 mb-6">
+            <button
+              onClick={() => router.push("/browse")}
+              className="hover:text-blue-600 flex items-center gap-1"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Browse
+            </button>
+            <span>/</span>
+            <span className="text-gray-900 font-medium">{toy.title}</span>
+          </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+            {/* Image Gallery */}
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6 }}
+              className="space-y-4"
             >
-              <Card className="overflow-hidden">
-                <CardContent className="p-0">
-                  <div className="relative aspect-square">
-                    {imageLoading && (
-                      <div className="absolute inset-0 bg-gray-100 animate-pulse flex items-center justify-center">
-                        <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+              {/* Main Image */}
+              <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100">
+                {toy.images && toy.images.length > 0 ? (
+                  <>
+                    {toy.images &&
+                    toy.images.length > 0 &&
+                    toy.images[currentImageIndex] ? (
+                      <img
+                        src={toy.images[currentImageIndex]}
+                        alt={toy.title}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = "none";
+                          // Show fallback
+                          const fallback = e.currentTarget.nextElementSibling;
+                          if (fallback) fallback.style.display = "flex";
+                        }}
+                      />
+                    ) : null}
+
+                    {/* Fallback for broken/missing images */}
+                    <div
+                      className="w-full h-full bg-gray-200 flex items-center justify-center"
+                      style={{
+                        display:
+                          toy.images && toy.images.length > 0 ? "none" : "flex",
+                      }}
+                    >
+                      <Camera className="w-16 h-16 text-gray-400" />
+                    </div>
+
+                    {/* Navigation Arrows */}
+                    {toy.images.length > 1 && (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white"
+                          onClick={prevImage}
+                        >
+                          <ChevronLeft className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white"
+                          onClick={nextImage}
+                        >
+                          <ChevronRight className="w-4 h-4" />
+                        </Button>
+                      </>
+                    )}
+
+                    {/* Image Counter */}
+                    {toy.images.length > 1 && (
+                      <div className="absolute bottom-4 right-4 bg-black/50 text-white px-2 py-1 rounded text-sm">
+                        {currentImageIndex + 1} / {toy.images.length}
                       </div>
                     )}
-                    <Image
-                      src={currentToy.image}
-                      alt={currentToy.title}
-                      fill
-                      className="object-cover"
-                      onLoad={() => setImageLoading(false)}
-                    />
-
-                    <div className="absolute top-4 left-4 flex flex-col gap-2">
-                      {currentToy.isNew && (
-                        <Badge className="bg-green-600 hover:bg-green-700">
-                          <Zap className="w-3 h-3 mr-1" />
-                          New
-                        </Badge>
-                      )}
-                      {currentToy.isFeatured && (
-                        <Badge className="bg-purple-600 hover:bg-purple-700">
-                          <Star className="w-3 h-3 mr-1" />
-                          Featured
-                        </Badge>
-                      )}
-                    </div>
-
-                    <div className="absolute top-4 right-4 flex flex-col gap-2">
-                      <Button
-                        variant="secondary"
-                        size="icon"
-                        onClick={() => toggleWishlist(currentToy.id)}
-                      >
-                        <Heart
-                          className={`w-4 h-4 ${
-                            wishlist.includes(currentToy.id)
-                              ? "fill-red-500 text-red-500"
-                              : "text-gray-600"
-                          }`}
-                        />
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        size="icon"
-                        onClick={handleShare}
-                      >
-                        <Share2 className="w-4 h-4" />
-                      </Button>
-                    </div>
+                  </>
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <Camera className="w-16 h-16 text-gray-400" />
                   </div>
-                </CardContent>
-              </Card>
+                )}
+              </div>
+
+              {/* Thumbnail Gallery */}
+              {toy.images && toy.images.length > 1 && (
+                <div className="flex gap-2 overflow-x-auto pb-2">
+                  {toy.images.map((image, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setCurrentImageIndex(index)}
+                      className={`relative w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 border-2 transition-all ${
+                        index === currentImageIndex
+                          ? "border-blue-500 ring-2 ring-blue-200"
+                          : "border-gray-200 hover:border-gray-300"
+                      }`}
+                    >
+                      <img
+                        src={image}
+                        alt={`${toy.title} ${index + 1}`}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = "none";
+                        }}
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
             </motion.div>
 
+            {/* Product Details */}
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
+              transition={{ duration: 0.6 }}
               className="space-y-6"
             >
+              {/* Header */}
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  {categoryIcons[currentToy.category]}
-                  <Badge variant="outline">{currentToy.category}</Badge>
-                  <Badge variant="outline">{currentToy.brand}</Badge>
-                </div>
-                <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-2">
-                  {currentToy.title}
-                </h1>
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center">
-                    <Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />
-                    <span className="ml-1 text-lg font-semibold">
-                      {currentToy.rating}
-                    </span>
-                    <span className="ml-1 text-gray-500">
-                      ({currentToy.reviews?.length || 0} reviews)
-                    </span>
-                  </div>
                   <Badge
-                    variant={
-                      currentToy.availability === "Available"
-                        ? "default"
-                        : currentToy.availability === "Limited"
-                        ? "secondary"
-                        : "outline"
-                    }
-                    className={
-                      currentToy.availability === "Available"
-                        ? "bg-green-100 text-green-700 border-green-200"
-                        : currentToy.availability === "Limited"
-                        ? "bg-yellow-100 text-yellow-700 border-yellow-200"
-                        : "bg-gray-100 text-gray-700"
-                    }
+                    className={`${
+                      toy.isAvailable
+                        ? "bg-green-100 text-green-800 hover:bg-green-200"
+                        : "bg-red-100 text-red-800 hover:bg-red-200"
+                    }`}
                   >
-                    <CheckCircle className="w-3 h-3 mr-1" />
-                    {currentToy.availability}
+                    {toy.isAvailable ? (
+                      <>
+                        <CheckCircle className="w-3 h-3 mr-1" />
+                        Available
+                      </>
+                    ) : (
+                      <>
+                        <AlertCircle className="w-3 h-3 mr-1" />
+                        Currently Rented
+                      </>
+                    )}
+                  </Badge>
+
+                  <Badge variant="outline">
+                    <Building className="w-3 h-3 mr-1" />
+                    {toy.manufacturer}
                   </Badge>
                 </div>
-              </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center text-gray-600">
-                  <Users className="w-5 h-5 mr-2" />
-                  <span>{currentToy.ageRange}</span>
-                </div>
-                <div className="flex items-center text-gray-600">
-                  <Clock className="w-5 h-5 mr-2" />
-                  <span>{currentToy.playTime}</span>
-                </div>
-                <div className="flex items-center text-gray-600">
-                  <Target className="w-5 h-5 mr-2" />
-                  <span>{currentToy.difficulty}</span>
-                </div>
-                <div className="flex items-center text-gray-600">
-                  <Users className="w-5 h-5 mr-2" />
-                  <span>{currentToy.playerCount}</span>
-                </div>
-              </div>
+                <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
+                  {toy.title}
+                </h1>
 
-              <div>
-                <p className="text-gray-700 leading-relaxed">
-                  {currentToy.detailedDescription || currentToy.description}
+                <p className="text-lg text-gray-600 leading-relaxed">
+                  {toy.desc}
                 </p>
               </div>
 
-              <div>
-                <h3 className="font-semibold mb-3">Skills Developed</h3>
-                <div className="flex flex-wrap gap-2">
-                  {currentToy.skills.map((skill) => (
-                    <Badge
-                      key={skill}
-                      variant="secondary"
-                      className="bg-blue-50 text-blue-700"
+              {/* Price and Actions */}
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <div className="text-sm text-gray-600 mb-1">
+                      Rental Price
+                    </div>
+                    <div className="text-3xl font-bold text-blue-600">
+                      {toy.value.toLocaleString()} KZT
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={toggleWishlist}
+                      className="text-gray-600 hover:text-red-500"
                     >
-                      {skill}
+                      <Heart
+                        className={`w-5 h-5 ${
+                          isWishlisted ? "fill-red-500 text-red-500" : ""
+                        }`}
+                      />
+                    </Button>
+
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={handleShare}
+                      className="text-gray-600 hover:text-blue-500"
+                    >
+                      <Share2 className="w-5 h-5" />
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Quantity Selector (if needed) */}
+                <div className="flex items-center gap-4 mb-6">
+                  <label className="text-sm font-medium text-gray-700">
+                    Quantity:
+                  </label>
+                  <div className="flex items-center border rounded-lg">
+                    <button
+                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                      className="px-3 py-2 hover:bg-gray-50"
+                      disabled={quantity <= 1}
+                    >
+                      -
+                    </button>
+                    <span className="px-4 py-2 border-x">{quantity}</span>
+                    <button
+                      onClick={() => setQuantity(quantity + 1)}
+                      className="px-3 py-2 hover:bg-gray-50"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Button
+                    onClick={handleAddToCart}
+                    disabled={!toy.isAvailable}
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    <ShoppingCart className="w-4 h-4 mr-2" />
+                    Add to Cart
+                  </Button>
+
+                  <Button
+                    onClick={handleQuickRent}
+                    disabled={!toy.isAvailable}
+                    className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                  >
+                    <Zap className="w-4 h-4 mr-2" />
+                    Quick Rent
+                  </Button>
+                </div>
+
+                {!toy.isAvailable && (
+                  <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <div className="flex items-center text-yellow-800">
+                      <Info className="w-4 h-4 mr-2" />
+                      <span className="text-sm">
+                        This toy is currently rented. Check back later or add to
+                        wishlist.
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Key Information */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-white border rounded-lg p-4">
+                  <div className="flex items-center mb-2">
+                    <Users className="w-5 h-5 text-blue-600 mr-2" />
+                    <span className="font-medium">Age Range</span>
+                  </div>
+                  <p className="text-lg">{toy.recommendedAge}</p>
+                </div>
+
+                <div className="bg-white border rounded-lg p-4">
+                  <div className="flex items-center mb-2">
+                    <Package className="w-5 h-5 text-blue-600 mr-2" />
+                    <span className="font-medium">Brand</span>
+                  </div>
+                  <p className="text-lg">{toy.manufacturer}</p>
+                </div>
+              </div>
+
+              {/* Categories */}
+              <div>
+                <h3 className="font-semibold text-lg mb-3 flex items-center">
+                  <Target className="w-5 h-5 mr-2 text-blue-600" />
+                  Categories
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {toy.categories.map((category, index) => (
+                    <Badge key={index} variant="secondary" className="text-sm">
+                      {category}
                     </Badge>
                   ))}
                 </div>
               </div>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Calendar className="w-5 h-5 mr-2" />
-                    Rental Options
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 gap-3 mb-4">
-                    {currentToy.rentalPeriods?.map((period) => (
-                      <button
-                        key={period.period}
-                        className={`p-3 rounded-lg border-2 transition-all relative ${
-                          selectedRentalPeriod === period.period
-                            ? "border-blue-500 bg-blue-50"
-                            : "border-gray-200 hover:border-gray-300"
-                        }`}
-                        onClick={() => setSelectedRentalPeriod(period.period)}
-                      >
-                        {period.popular && (
-                          <Badge className="absolute -top-2 -right-2 bg-orange-500">
-                            Popular
-                          </Badge>
-                        )}
-                        <div className="text-sm font-medium">
-                          {period.period}
-                        </div>
-                        <div className="text-lg font-bold text-blue-600">
-                          {period.tokens} tokens
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="flex gap-3">
-                    <Button
-                      onClick={() => handleAddToCart(currentToy)}
-                      disabled={currentToy.availability === "Coming Soon"}
-                      className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-                    >
-                      Add to Cart -{" "}
-                      {selectedRental?.tokens || currentToy.tokens} tokens
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+              {/* Skills */}
+              <div>
+                <h3 className="font-semibold text-lg mb-3 flex items-center">
+                  <Lightbulb className="w-5 h-5 mr-2 text-blue-600" />
+                  Skills Developed
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {toy.skills.map((skill, index) => (
+                    <Badge key={index} variant="outline" className="text-sm">
+                      {skill}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
             </motion.div>
           </div>
 
-          <Card>
-            <CardHeader>
-              <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg w-fit">
-                {["overview", "reviews", "rental"].map((tab) => (
-                  <button
-                    key={tab}
-                    className={`px-4 py-2 rounded-md capitalize transition-all ${
-                      activeTab === tab
-                        ? "bg-white shadow-sm text-blue-600 font-medium"
-                        : "text-gray-600 hover:text-gray-900"
-                    }`}
-                    onClick={() => setActiveTab(tab as any)}
-                  >
-                    {tab}
-                  </button>
-                ))}
-              </div>
-            </CardHeader>
-            <CardContent>
-              {activeTab === "overview" && (
-                <div className="space-y-8">
-                  <div>
-                    <h3 className="text-xl font-semibold mb-4">Key Features</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {currentToy.features?.map((feature, index) => (
-                        <div key={index} className="flex items-start">
-                          <CheckCircle className="w-5 h-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
-                          <span className="text-gray-700">{feature}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div>
-                      <h3 className="text-xl font-semibold mb-4">
-                        Specifications
-                      </h3>
-                      <div className="space-y-3">
-                        <div className="flex justify-between py-2 border-b border-gray-100">
-                          <span className="text-gray-600">Dimensions</span>
-                          <span className="font-medium">
-                            {currentToy.dimensions}
-                          </span>
-                        </div>
-                        <div className="flex justify-between py-2 border-b border-gray-100">
-                          <span className="text-gray-600">Weight</span>
-                          <span className="font-medium">
-                            {currentToy.weight}
-                          </span>
-                        </div>
-                        <div className="flex justify-between py-2 border-b border-gray-100">
-                          <span className="text-gray-600">Brand</span>
-                          <span className="font-medium">
-                            {currentToy.brand}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <h3 className="text-xl font-semibold mb-4">
-                        Safety & Care
-                      </h3>
-                      <div className="space-y-3">
-                        <div>
-                          <h4 className="font-medium text-gray-900 mb-2 flex items-center">
-                            <ShieldCheck className="w-4 h-4 mr-2" />
-                            Safety Information
-                          </h4>
-                          <ul className="space-y-1">
-                            {currentToy.safetyInfo?.map((info, index) => (
-                              <li
-                                key={index}
-                                className="text-sm text-gray-600 flex items-start"
-                              >
-                                <AlertCircle className="w-3 h-3 mr-2 mt-1 text-orange-500 flex-shrink-0" />
-                                {info}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {activeTab === "reviews" && (
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-xl font-semibold">Customer Reviews</h3>
-                    <div className="flex items-center gap-2">
-                      <Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />
-                      <span className="text-lg font-semibold">
-                        {currentToy.rating}
-                      </span>
-                      <span className="text-gray-500">
-                        ({currentToy.reviews?.length || 0} reviews)
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    {currentToy.reviews?.map((review) => (
-                      <Card key={review.id} className="p-4">
-                        <div className="flex items-start justify-between mb-3">
-                          <div>
-                            <div className="font-medium">{review.userName}</div>
-                            <div className="flex items-center gap-2 mt-1">
-                              <div className="flex">
-                                {[...Array(5)].map((_, i) => (
-                                  <Star
-                                    key={i}
-                                    className={`w-4 h-4 ${
-                                      i < review.rating
-                                        ? "text-yellow-400 fill-yellow-400"
-                                        : "text-gray-300"
-                                    }`}
-                                  />
-                                ))}
-                              </div>
-                              <span className="text-sm text-gray-500">
-                                {review.date}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                        <p className="text-gray-700 mb-3">{review.comment}</p>
-                        <div className="flex items-center gap-4 text-sm">
-                          <button className="flex items-center gap-1 text-gray-500 hover:text-green-600">
-                            <ThumbsUp className="w-4 h-4" />
-                            Helpful ({review.helpful})
-                          </button>
-                          <button className="flex items-center gap-1 text-gray-500 hover:text-gray-700">
-                            <MessageCircle className="w-4 h-4" />
-                            Reply
-                          </button>
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-
-                  <Button variant="outline" className="w-full">
-                    <MessageCircle className="w-4 h-4 mr-2" />
-                    Write a Review
-                  </Button>
-                </div>
-              )}
-
-              {activeTab === "rental" && (
-                <div className="space-y-6">
-                  <h3 className="text-xl font-semibold">Rental Information</h3>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <h4 className="font-semibold mb-3 flex items-center">
-                        <Truck className="w-5 h-5 mr-2" />
-                        Pickup & Delivery
-                      </h4>
-                      <div className="space-y-2 text-sm text-gray-600">
-                        <p>• Free pickup from our Astana location</p>
-                        <p>• Home delivery available for 10 tokens</p>
-                        <p>• Same-day delivery within city limits</p>
-                        <p>• Contactless pickup/delivery options</p>
-                      </div>
-                    </div>
-
-                    <div>
-                      <h4 className="font-semibold mb-3 flex items-center">
-                        <RotateCcw className="w-5 h-5 mr-2" />
-                        Return Policy
-                      </h4>
-                      <div className="space-y-2 text-sm text-gray-600">
-                        <p>• Return by end of rental period</p>
-                        <p>• Late fees: 5 tokens per day</p>
-                        <p>• Extend rental anytime online</p>
-                        <p>• Full refund if toy is defective</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h4 className="font-semibold mb-3 flex items-center">
-                      <Award className="w-5 h-5 mr-2" />
-                      Care Instructions
-                    </h4>
-                    <div className="bg-blue-50 p-4 rounded-lg">
-                      <ul className="space-y-2 text-sm">
-                        {currentToy.careInstructions?.map(
-                          (instruction, index) => (
-                            <li key={index} className="flex items-start">
-                              <CheckCircle className="w-4 h-4 text-blue-500 mr-2 mt-0.5 flex-shrink-0" />
-                              {instruction}
-                            </li>
-                          )
-                        )}
-                      </ul>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h4 className="font-semibold mb-3">Damage Policy</h4>
-                    <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-                      <div className="flex items-start">
-                        <AlertCircle className="w-5 h-5 text-yellow-600 mr-3 mt-0.5 flex-shrink-0" />
-                        <div className="text-sm text-yellow-800">
-                          <p className="font-medium mb-2">
-                            Please handle with care!
-                          </p>
-                          <p>
-                            Minor wear is expected, but damage fees may apply
-                            for:
-                          </p>
-                          <ul className="mt-2 space-y-1 ml-4 list-disc">
-                            <li>Broken or missing pieces</li>
-                            <li>Excessive dirt or stains</li>
-                            <li>Electronic malfunctions due to misuse</li>
-                          </ul>
-                          <p className="mt-2">
-                            Damage fees are capped at 50% of retail value.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {relatedToys.length > 0 && (
-            <div className="mt-12">
-              <h2 className="text-2xl font-bold mb-6">You Might Also Like</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {relatedToys.map((toy) => (
-                  <motion.div
-                    key={toy.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <Card
-                      className="group hover:shadow-lg transition-all duration-300 cursor-pointer"
-                      onClick={() => router.push(`/toy-details?id=${toy.id}`)}
-                    >
-                      <CardContent className="p-0">
-                        <div className="relative h-48 overflow-hidden">
-                          <Image
-                            src={toy.image}
-                            alt={toy.title}
-                            fill
-                            className="object-cover group-hover:scale-105 transition-transform duration-300"
-                          />
-                          {toy.isNew && (
-                            <Badge className="absolute top-3 left-3 bg-green-600">
-                              New
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="p-4">
-                          <h3 className="font-semibold group-hover:text-blue-600 transition-colors">
-                            {toy.title}
-                          </h3>
-                          <p className="text-sm text-gray-600 mt-1 line-clamp-2">
-                            {toy.description}
-                          </p>
-                          <div className="flex items-center justify-between mt-3">
-                            <div className="flex items-center">
-                              <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                              <span className="ml-1 text-sm font-medium">
-                                {toy.rating}
-                              </span>
-                            </div>
-                            <div className="text-lg font-bold text-blue-600">
-                              {toy.tokens} tokens
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 lg:hidden">
-            <Card className="shadow-lg">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="text-center">
-                  <div className="text-lg font-bold text-blue-600">
-                    {selectedRental?.tokens || currentToy.tokens} tokens
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    {selectedRentalPeriod}
-                  </div>
-                </div>
-                <Button
-                  onClick={() => handleAddToCart(currentToy)}
-                  disabled={currentToy.availability === "Coming Soon"}
-                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-                >
-                  Add to Cart
-                </Button>
+          {/* Additional Information */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8"
+          >
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Shield className="w-5 h-5 mr-2 text-green-600" />
+                  Safety Assured
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-600">
+                  All toys are thoroughly sanitized and safety-checked before
+                  each rental.
+                </p>
               </CardContent>
             </Card>
-          </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Truck className="w-5 h-5 mr-2 text-blue-600" />
+                  Easy Pickup
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-600">
+                  Convenient pickup locations across Almaty. Free delivery for
+                  orders over 10,000 KZT.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Award className="w-5 h-5 mr-2 text-purple-600" />
+                  Quality Guaranteed
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-600">
+                  Premium toys from trusted brands. If you're not satisfied,
+                  we'll make it right.
+                </p>
+              </CardContent>
+            </Card>
+          </motion.div>
         </div>
       </main>
       <Footer />
     </div>
+  );
+}
+
+// Main component with Suspense wrapper
+export default function ToyDetailsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex flex-col">
+          <Navigation />
+          <main className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4" />
+              <p className="text-gray-600">Loading toy details...</p>
+            </div>
+          </main>
+          <Footer />
+        </div>
+      }
+    >
+      <ToyDetailsContent />
+    </Suspense>
   );
 }

@@ -1,3 +1,66 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Add this to your globals.css or component styles */
+
+/* Fix for shadcn/ui Card components */
+.card,
+[data-card] {
+  background-color: white !important;
+  background: white !important;
+  opacity: 1 !important;
+}
+
+/* Fix for any elements with backdrop-filter that might be too transparent */
+.backdrop-blur-md,
+.backdrop-blur-sm,
+.backdrop-blur-lg {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+}
+
+/* Fix for glass-morphism effects that are too transparent */
+.bg-white\/80 {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+}
+
+.bg-white\/60 {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.bg-white\/40 {
+  background-color: rgba(255, 255, 255, 0.85) !important;
+}
+
+/* Ensure all card-like components have solid backgrounds */
+.rounded-lg,
+.rounded-xl,
+.rounded-2xl {
+  background-color: white;
+}
+
+/* Fix for any components using Tailwind's opacity utilities */
+.opacity-80,
+.opacity-90,
+.opacity-95 {
+  opacity: 1 !important;
+}
+
+/* Common card patterns - make them solid */
+.shadow,
+.shadow-sm,
+.shadow-md,
+.shadow-lg {
+  background-color: white;
+  opacity: 1;
+}
+
+/* Fix for any custom card classes you might have */
+.card-container,
+.product-card,
+.toy-card,
+.rental-card,
+.profile-card {
+  background-color: white !important;
+  opacity: 1 !important;
+}

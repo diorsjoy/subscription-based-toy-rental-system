@@ -9,14 +9,14 @@ export function Hero() {
   const [glitchActive, setGlitchActive] = useState(false);
 
   // Random glitch effect
-  useEffect(() => {
-    const glitchInterval = setInterval(() => {
-      setGlitchActive(true);
-      setTimeout(() => setGlitchActive(false), 200);
-    }, 5000);
+  // useEffect(() => {
+  //   const glitchInterval = setInterval(() => {
+  //     setGlitchActive(true);
+  //     setTimeout(() => setGlitchActive(false), 200);
+  //   }, 5000);
 
-    return () => clearInterval(glitchInterval);
-  }, []);
+  //   return () => clearInterval(glitchInterval);
+  // }, []);
 
   return (
     <div className="relative min-h-[70vh] grid grid-cols-1 md:grid-cols-2 overflow-hidden">

@@ -6,6 +6,8 @@ import { CartProvider } from "@/components/cart";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TokenProvider } from "@/components/providers/token-provider";
 import { RentalProvider } from "@/components/providers/rental-provider";
+import { AuthProvider } from "@/lib/contexts/AuthContext";
+import { LanguageProvider } from "@/lib/contexts/LanguageContext";
 import { Toaster } from "@/components/ui/toaster";
 import type React from "react";
 
@@ -27,17 +29,20 @@ export default function RootLayout({
       <body className="font-mono">
         {/* Grid background */}
         <div className="fixed inset-0 z-0 pointer-events-none futuristic-grid-bg" />
-
-        <ThemeProvider>
-          <CartProvider>
-            <TokenProvider>
-              <RentalProvider>
-                {children}
-                <Toaster />
-              </RentalProvider>
-            </TokenProvider>
-          </CartProvider>
-        </ThemeProvider>
+        <LanguageProvider>
+          <AuthProvider>
+            <ThemeProvider>
+              <CartProvider>
+                <TokenProvider>
+                  <RentalProvider>
+                    {children}
+                    <Toaster />
+                  </RentalProvider>
+                </TokenProvider>
+              </CartProvider>
+            </ThemeProvider>
+          </AuthProvider>
+        </LanguageProvider>
       </body>
     </html>
   );

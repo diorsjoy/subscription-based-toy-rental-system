@@ -1,7 +1,3 @@
-// src/types/index.ts
-// Core application type definitions
-
-// User related types
 export interface User {
   id: string;
   email: string;
@@ -544,4 +540,604 @@ export interface Action<T = any> {
   payload?: T;
   error?: boolean;
   meta?: any;
+}
+
+export interface APIResponse<T = any> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  message?: string;
+}
+
+export interface PaginatedResponse<T> {
+  items: T[];
+  total: number;
+  page: number;
+  limit: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+}
+
+// types/subscription.ts
+export enum SubscriptionStatus {
+  STATUS_OK = "STATUS_OK",
+  STATUS_INVALID_PLAN = "STATUS_INVALID_PLAN",
+  STATUS_INVALID_USER = "STATUS_INVALID_USER",
+  STATUS_ALREADY_SUBSCRIBED = "STATUS_ALREADY_SUBSCRIBED",
+  STATUS_SUBSCRIPTION_NOTFOUND = "STATUS_SUBSCRIPTION_NOTFOUND",
+  STATUS_INTERNAL_ERROR = "STATUS_INTERNAL_ERROR",
+  STATUS_INSUFFICIENT_BALANCE = "STATUS_INSUFFICIENT_BALANCE",
+}
+
+export interface SubscriptionPlan {
+  plan_id: number;
+  name: string;
+  rental_limit: number;
+  price: number;
+  duration: string;
+}
+
+export interface MappedSubscriptionPlan {
+  id: number;
+  name: string;
+  rentalLimit: number;
+  price: number;
+  duration: string;
+  pricePerRental: number;
+  features: string[];
+  isPremium: boolean;
+}
+
+export interface SubscriptionDetails {
+  user_id: number;
+  plan_id: number;
+  plan_name: string;
+  remaining_limit: number;
+  expires_at: string;
+  created_at: string;
+  is_active: boolean;
+}
+
+export interface SubscriptionCheckResponse {
+  sub_status: boolean;
+}
+
+export interface SubscribeRequest {
+  user_id: number;
+  plan_id: number;
+}
+
+export interface SubscribeResponse {
+  sub_id: number;
+  status: SubscriptionStatus;
+}
+
+export interface ChangePlanRequest {
+  user_id: number;
+  new_plan_id: number;
+}
+
+export interface ChangePlanResponse {
+  status: SubscriptionStatus;
+}
+
+export interface UnsubscribeRequest {
+  user_id: number;
+}
+
+export interface UnsubscribeResponse {
+  status: SubscriptionStatus;
+}
+
+export interface BalanceRequest {
+  value: number;
+}
+
+export interface BalanceResponse {
+  op_status: SubscriptionStatus;
+  msg: string;
+  left: number;
+}
+
+// types/toy.ts
+export enum ToyCategory {
+  EDUCATIONAL = "educational",
+  ACTION = "action",
+  CREATIVE = "creative",
+  ELECTRONIC = "electronic",
+  BUILDING = "building",
+  OUTDOOR = "outdoor",
+  ROLE_PLAY = "role_play",
+}
+
+export enum ToyCondition {
+  NEW = "new",
+  EXCELLENT = "excellent",
+  GOOD = "good",
+  FAIR = "fair",
+}
+
+export interface Toy {
+  id: number;
+  name: string;
+  description: string;
+  category: ToyCategory;
+  age_range: string;
+  token_cost: number;
+  is_available: boolean;
+  rating: number;
+  image_url: string;
+  manufacturer: string;
+  condition: ToyCondition;
+  tags: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MappedToy {
+  id: number;
+  name: string;
+  description: string;
+  category: ToyCategory;
+  ageRange: string;
+  tokenCost: number;
+  isAvailable: boolean;
+  rating: number;
+  imageUrl: string;
+  manufacturer: string;
+  condition: ToyCondition;
+  tags: string[];
+  canRent: boolean;
+  requiresSubscription: boolean;
+  insufficientLimit: boolean;
+}
+
+export interface ToyFilters {
+  category?: ToyCategory;
+  ageRange?: string;
+  maxPrice?: number;
+  available?: boolean;
+  condition?: ToyCondition;
+  search?: string;
+  sortBy?: "name" | "price" | "rating" | "created_at";
+  sortOrder?: "asc" | "desc";
+}
+
+export interface GetToysResponse {
+  toys: Toy[];
+  total: number;
+}
+
+// types/rental.ts
+export enum RentalStatus {
+  ACTIVE = "active",
+  RETURNED = "returned",
+  OVERDUE = "overdue",
+  EXTENDED = "extended",
+  CANCELLED = "cancelled",
+}
+
+export interface Rental {
+  id: number;
+  user_id: number;
+  toy_id: number;
+  toy_name: string;
+  start_date: string;
+  end_date: string;
+  status: RentalStatus;
+  total_cost: number;
+  is_extended: boolean;
+  return_date?: string;
+  late_fee?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MappedRental {
+  id: number;
+  toyId: number;
+  toyName: string;
+  startDate: Date;
+  endDate: Date;
+  status: RentalStatus;
+  totalCost: number;
+  isExtended: boolean;
+  returnDate?: Date;
+  lateFee?: number;
+  daysRemaining: number;
+  isOverdue: boolean;
+}
+
+export interface RentToyRequest {
+  toy_id: number;
+  rental_duration_days: number;
+  user_id: number;
+}
+
+export interface RentToyResponse {
+  rental_id: number;
+  success: boolean;
+  message: string;
+}
+
+export interface ReturnToyRequest {
+  rental_id: number;
+}
+
+export interface ExtendRentalRequest {
+  rental_id: number;
+  additional_days: number;
+}
+
+export interface GetUserRentalsResponse {
+  rentals: Rental[];
+}
+
+// types/user.ts
+export interface User {
+  id: number;
+  email: string;
+  full_name: string;
+  phone: string;
+  address: string;
+  created_at: string;
+  updated_at: string;
+  is_verified: boolean;
+  avatar_url?: string;
+}
+
+export interface RegisterRequest {
+  email: string;
+  password: string;
+  full_name: string;
+  phone: string;
+  address: string;
+}
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface AuthResponse {
+  token: string;
+  refresh_token: string;
+  user: User;
+  expires_at: string;
+}
+
+export interface UserProfile {
+  user: User;
+  subscription?: SubscriptionDetails;
+  stats: {
+    total_rentals: number;
+    active_rentals: number;
+    favorite_category: string;
+  };
+}
+
+// types/payment.ts
+export enum PaymentMethod {
+  KASPI = "kaspi",
+  HALYK = "halyk",
+  STRIPE = "stripe",
+  CASH = "cash",
+}
+
+export enum PaymentStatus {
+  PENDING = "pending",
+  COMPLETED = "completed",
+  FAILED = "failed",
+  CANCELLED = "cancelled",
+  REFUNDED = "refunded",
+}
+
+export interface Payment {
+  id: number;
+  user_id: number;
+  plan_id?: number;
+  amount: number;
+  currency: string;
+  payment_method: PaymentMethod;
+  status: PaymentStatus;
+  external_payment_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreatePaymentRequest {
+  amount: number;
+  currency: string;
+  plan_id?: number;
+  payment_method: PaymentMethod;
+  user_id: number;
+}
+
+export interface CreatePaymentResponse {
+  payment_id: number;
+  payment_url: string;
+  external_payment_id: string;
+}
+
+export interface PaymentStatusResponse {
+  status: PaymentStatus;
+  payment: Payment;
+}
+
+// types/hooks.ts
+export interface UseSubscriptionReturn {
+  isActive: boolean;
+  details: SubscriptionDetails | null;
+  plans: MappedSubscriptionPlan[];
+  loading: boolean;
+  error: string | null;
+  actionLoading: {
+    subscribing: boolean;
+    changingPlan: boolean;
+    unsubscribing: boolean;
+  };
+  subscribe: (
+    planId: number
+  ) => Promise<{ success: boolean; error?: string; subscriptionId?: number }>;
+  changePlan: (
+    newPlanId: number
+  ) => Promise<{ success: boolean; error?: string }>;
+  unsubscribe: () => Promise<{ success: boolean; error?: string }>;
+  refresh: () => Promise<void>;
+}
+
+export interface UseToysReturn {
+  toys: MappedToy[];
+  loading: boolean;
+  error: string | null;
+  refresh: () => Promise<void>;
+}
+
+export interface UseRentalsReturn {
+  rentals: MappedRental[];
+  loading: boolean;
+  error: string | null;
+  actionLoading: Record<string, boolean>;
+  rentToy: (
+    toyId: number,
+    duration?: number
+  ) => Promise<{ success: boolean; error?: string; rentalId?: number }>;
+  returnToy: (
+    rentalId: number
+  ) => Promise<{ success: boolean; error?: string }>;
+  extendRental: (
+    rentalId: number,
+    additionalDays: number
+  ) => Promise<{ success: boolean; error?: string }>;
+  refresh: () => Promise<void>;
+}
+
+export interface UseAuthReturn {
+  user: User | null;
+  loading: boolean;
+  error: string | null;
+  isAuthenticated: boolean;
+  login: (
+    email: string,
+    password: string
+  ) => Promise<{ success: boolean; error?: string }>;
+  register: (
+    userData: RegisterRequest
+  ) => Promise<{ success: boolean; error?: string }>;
+  logout: () => void;
+  refresh: () => Promise<void>;
+}
+
+export interface UsePaymentReturn {
+  paymentHistory: Payment[];
+  loading: boolean;
+  error: string | null;
+  createPayment: (
+    amount: number,
+    planId: number,
+    paymentMethod?: PaymentMethod
+  ) => Promise<{
+    success: boolean;
+    error?: string;
+    paymentUrl?: string;
+    paymentId?: number;
+  }>;
+  checkPaymentStatus: (paymentId: number) => Promise<PaymentStatusResponse>;
+  loadPaymentHistory: () => Promise<void>;
+}
+
+// types/notification.ts
+export enum NotificationType {
+  SUCCESS = "success",
+  ERROR = "error",
+  WARNING = "warning",
+  INFO = "info",
+}
+
+export interface Notification {
+  id: number;
+  type: NotificationType;
+  message: string;
+  timeout?: number | false;
+  action?: {
+    label: string;
+    onClick: () => void;
+  };
+}
+
+export interface UseNotificationsReturn {
+  notifications: Notification[];
+  addNotification: (notification: Omit<Notification, "id">) => number;
+  removeNotification: (id: number) => void;
+  clearNotifications: () => void;
+}
+
+// types/websocket.ts
+export interface WebSocketMessage {
+  type: string;
+  payload: any;
+  timestamp: number;
+}
+
+export interface SubscriptionUpdateMessage {
+  type: "subscription_updated";
+  payload: {
+    user_id: number;
+    subscription: SubscriptionDetails;
+  };
+}
+
+export interface RentalReminderMessage {
+  type: "rental_reminder";
+  payload: {
+    user_id: number;
+    rental: Rental;
+    days_until_due: number;
+  };
+}
+
+export interface ToyAvailableMessage {
+  type: "toy_available";
+  payload: {
+    toy: Toy;
+    user_ids: number[];
+  };
+}
+
+export type WSMessage =
+  | SubscriptionUpdateMessage
+  | RentalReminderMessage
+  | ToyAvailableMessage;
+
+export interface UseWebSocketReturn {
+  connected: boolean;
+  wsManager: WebSocketManager | null;
+}
+
+// types/context.ts
+export interface SubscriptionContextType extends UseSubscriptionReturn {
+  auth: UseAuthReturn;
+  notifications: UseNotificationsReturn;
+  ws: UseWebSocketReturn;
+}
+
+// types/config.ts
+export interface APIConfig {
+  API_BASE_URL: string;
+  WS_URL: string;
+  TIMEOUT: number;
+  RETRY_ATTEMPTS: number;
+}
+
+export interface AppConfig {
+  development: APIConfig;
+  staging: APIConfig;
+  production: APIConfig;
+}
+
+// types/error.ts
+export class APIError extends Error {
+  constructor(
+    message: string,
+    public status?: number,
+    public code?: string,
+    public details?: any
+  ) {
+    super(message);
+    this.name = "APIError";
+  }
+}
+
+export interface ErrorBoundaryState {
+  hasError: boolean;
+  error?: Error;
+  errorInfo?: any;
+}
+
+// types/components.ts
+export interface ToyCardProps {
+  toy: MappedToy;
+  onRent?: (toyId: number) => void;
+  compact?: boolean;
+}
+
+export interface SubscriptionPlanCardProps {
+  plan: MappedSubscriptionPlan;
+  isCurrentPlan: boolean;
+  onSelect: (plan: MappedSubscriptionPlan) => void;
+  loading?: boolean;
+}
+
+export interface AuthModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  mode: "login" | "register";
+  onSwitch: () => void;
+}
+
+export interface RentalCardProps {
+  rental: MappedRental;
+  onReturn: (rentalId: number) => void;
+  onExtend: (rentalId: number) => void;
+  actionLoading: Record<string, boolean>;
+}
+
+export interface NotificationProps {
+  notification: Notification;
+  onRemove: (id: number) => void;
+}
+
+export interface LoadingSpinnerProps {
+  size?: "sm" | "md" | "lg";
+  className?: string;
+}
+
+export interface EmptyStateProps {
+  icon?: React.ComponentType<{ className?: string }>;
+  title: string;
+  description: string;
+  action?: {
+    label: string;
+    onClick: () => void;
+  };
+}
+
+// types/form.ts
+export interface FormField {
+  name: string;
+  label: string;
+  type:
+    | "text"
+    | "email"
+    | "password"
+    | "tel"
+    | "textarea"
+    | "select"
+    | "number";
+  placeholder?: string;
+  required?: boolean;
+  validation?: (value: any) => string | null;
+  options?: { value: string; label: string }[];
+}
+
+export interface FormData {
+  [key: string]: any;
+}
+
+export interface FormErrors {
+  [key: string]: string;
+}
+
+export interface UseFormReturn {
+  data: FormData;
+  errors: FormErrors;
+  isValid: boolean;
+  isSubmitting: boolean;
+  setValue: (name: string, value: any) => void;
+  setError: (name: string, error: string) => void;
+  clearErrors: () => void;
+  handleSubmit: (
+    onSubmit: (data: FormData) => Promise<void>
+  ) => (e: React.FormEvent) => Promise<void>;
+  reset: () => void;
 }
