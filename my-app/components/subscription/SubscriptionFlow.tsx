@@ -3,7 +3,6 @@
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   CreditCard,
   Check,
@@ -12,9 +11,9 @@ import {
   Clock,
   Users,
   Zap,
-  Loader2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { formatDuration } from "@/types/subscription";
 
 interface Plan {
   planId: number; // Backend uses camelCase
@@ -108,7 +107,7 @@ export const SubscriptionFlow: React.FC<SubscriptionFlowProps> = ({
                 ₸{selectedPlan.price.toLocaleString()}
               </div>
               <div className="text-sm text-blue-700">
-                per {selectedPlan.duration}
+                per {formatDuration(selectedPlan.duration)}
               </div>
             </div>
           </div>
@@ -120,7 +119,7 @@ export const SubscriptionFlow: React.FC<SubscriptionFlowProps> = ({
             </div>
             <div className="flex items-center gap-2">
               <Clock className="w-4 h-4 text-blue-600" />
-              <span>{selectedPlan.duration} duration</span>
+              <span>{formatDuration(selectedPlan.duration)}duration</span>
             </div>
             <div className="flex items-center gap-2">
               <Zap className="w-4 h-4 text-blue-600" />
