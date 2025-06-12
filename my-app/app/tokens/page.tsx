@@ -1,3 +1,5 @@
+"use client";
+
 import { TokenPurchase } from "@/components/tokens/TokenPurchase";
 import { CurrencyConverter } from "@/components/tokens/CurrencyConverter";
 import { KazakhstanPaymentInfo } from "@/components/tokens/KazakhstanPaymentInfo";
