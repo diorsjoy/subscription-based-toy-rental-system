@@ -6,7 +6,7 @@ export interface Plan {
   description?: string;
   rental_limit: number;
   price: number;
-  duration: string | number; // Can handle both backend enum and formatted string
+  duration: string | number;
 }
 
 export interface Subscription {

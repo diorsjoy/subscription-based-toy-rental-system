@@ -5,65 +5,40 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Check,
-  Crown,
-  Star,
-  Users,
-  Clock,
-  ArrowRight,
-  RefreshCw,
-} from "lucide-react";
+import { Check, Crown, Star, Users, Clock, ArrowRight } from "lucide-react";
+import { formatDuration } from "@/types/subscription";
 
 interface Plan {
-  plan_id: number;
+  planId: number; // Backend uses camelCase
   name: string;
-  description?: string;
-  rental_limit: number;
+  description: string;
+  rentalLimit: number; // Backend uses camelCase
   price: number;
-  duration: string;
+  duration: string | number;
 }
 
 interface PlanCardProps {
   plan: Plan;
   isCurrentPlan?: boolean;
   isAuthenticated: boolean;
-  hasActiveSubscription: boolean;
   onSelect: (planId: number) => void;
-  loading?: boolean;
 }
 
 export const PlanCard: React.FC<PlanCardProps> = ({
   plan,
   isCurrentPlan = false,
   isAuthenticated,
-  hasActiveSubscription,
   onSelect,
-  loading = false,
 }) => {
-  const isPremium =
-    plan.name.toLowerCase().includes("premium") ||
-    plan.name.toLowerCase().includes("ultimate");
+  const isPremium = plan.name.toLowerCase().includes("premium");
   const isPopular = plan.name.toLowerCase().includes("family");
 
   const handleSelect = () => {
-    onSelect(plan.plan_id);
+    onSelect(plan.planId); // Use camelCase field name
   };
 
-  const formatDuration = (duration: string): string => {
-    const numericDuration = parseInt(duration);
-    switch (numericDuration) {
-      case 1:
-        return "1 month";
-      case 3:
-        return "3 months";
-      case 6:
-        return "6 months";
-      case 12:
-        return "1 year";
-      default:
-        return `${duration} months`;
-    }
+  const formatPrice = (price: number) => {
+    return (price / 100).toLocaleString("kz-KZ");
   };
 
   const getBadgeContent = () => {
@@ -77,7 +52,7 @@ export const PlanCard: React.FC<PlanCardProps> = ({
     }
     if (isPremium) {
       return (
-        <Badge className="bg-purple-100 text-purple-900 border border-purple-200">
+        <Badge className="bg-purple-600 text-white">
           <Crown className="w-3 h-3 mr-1" />
           Premium
         </Badge>
@@ -85,7 +60,7 @@ export const PlanCard: React.FC<PlanCardProps> = ({
     }
     if (isPopular) {
       return (
-        <Badge className="bg-blue-100 text-blue-900 border border-blue-200">
+        <Badge className="bg-blue-600 text-white">
           <Star className="w-3 h-3 mr-1" />
           Most Popular
         </Badge>
@@ -104,40 +79,19 @@ export const PlanCard: React.FC<PlanCardProps> = ({
     if (isPopular) {
       return "border-blue-300 bg-gradient-to-br from-blue-50 to-blue-100 shadow-lg scale-105";
     }
-    return "border-cyan-300 bg-gradient-to-br from-cyan-50 to-cyan-100 shadow-lg";
+    return "border-gray-200 hover:border-gray-300 hover:shadow-md transition-all duration-200";
   };
 
   const getButtonVariant = () => {
     if (isCurrentPlan) return "outline";
+    if (isPremium) return "default";
     return "default";
   };
 
   const getButtonText = () => {
-    if (!isAuthenticated) {
-      return "Sign In to Subscribe";
-    }
-
-    if (isCurrentPlan) {
-      return "Current Plan";
-    }
-
-    if (hasActiveSubscription) {
-      return "Change to This Plan";
-    }
-
-    return "Subscribe Now";
-  };
-
-  const getButtonIcon = () => {
-    if (loading) {
-      return <RefreshCw className="w-4 h-4 mr-2 animate-spin" />;
-    }
-
-    if (!isCurrentPlan && !isAuthenticated) {
-      return <ArrowRight className="w-4 h-4 ml-2" />;
-    }
-
-    return null;
+    if (!isAuthenticated) return "Sign In to Subscribe";
+    if (isCurrentPlan) return "Current Plan";
+    return "Choose Plan";
   };
 
   return (
@@ -157,7 +111,7 @@ export const PlanCard: React.FC<PlanCardProps> = ({
                 ? "text-purple-800"
                 : isPopular
                 ? "text-blue-800"
-                : "text-cyan-800"
+                : "text-gray-800"
             }
           >
             {plan.name}
@@ -169,12 +123,10 @@ export const PlanCard: React.FC<PlanCardProps> = ({
         )}
       </CardHeader>
 
-      <CardContent className="space-y-6 flex-grow">
+      <CardContent className="space-y-6">
         {/* Pricing */}
         <div className="text-center">
-          <div className="text-3xl font-bold text-gray-900">
-            ₸{plan.price.toLocaleString()}
-          </div>
+          <div className="text-3xl font-bold text-gray-900">₸{plan.price}</div>
           <div className="text-sm text-gray-600">per month</div>
         </div>
 
@@ -187,7 +139,7 @@ export const PlanCard: React.FC<PlanCardProps> = ({
                   ? "bg-purple-100"
                   : isPopular
                   ? "bg-blue-100"
-                  : "bg-cyan-100"
+                  : "bg-gray-100"
               }`}
             >
               <Users
@@ -196,13 +148,16 @@ export const PlanCard: React.FC<PlanCardProps> = ({
                     ? "text-purple-600"
                     : isPopular
                     ? "text-blue-600"
-                    : "text-cyan-600"
+                    : "text-gray-600"
                 }`}
               />
             </div>
             <div>
               <p className="font-medium text-gray-900">
-                {plan.rental_limit} rentals
+                {plan.rentalLimit} rentals
+              </p>
+              <p className="text-xs text-gray-500">
+                per {formatDuration(plan.duration)}
               </p>
             </div>
           </div>
@@ -214,7 +169,7 @@ export const PlanCard: React.FC<PlanCardProps> = ({
                   ? "bg-purple-100"
                   : isPopular
                   ? "bg-blue-100"
-                  : "bg-cyan-100"
+                  : "bg-gray-100"
               }`}
             >
               <Clock
@@ -223,12 +178,15 @@ export const PlanCard: React.FC<PlanCardProps> = ({
                     ? "text-purple-600"
                     : isPopular
                     ? "text-blue-600"
-                    : "text-cyan-600"
+                    : "text-gray-600"
                 }`}
               />
             </div>
             <div>
-              <p className="font-medium text-black-500">Auto-renewal</p>
+              <p className="font-medium text-gray-900">
+                {formatDuration(plan.duration)}
+              </p>
+              <p className="text-xs text-gray-500">Auto-renewal</p>
             </div>
           </div>
 
@@ -245,8 +203,21 @@ export const PlanCard: React.FC<PlanCardProps> = ({
                   Exclusive toys access
                 </span>
               </div>
+              {/* <div className="flex items-center gap-3">
+                <Check className="w-5 h-5 text-purple-600" />
+                <span className="text-sm text-gray-700">Free toy swaps</span>
+              </div> */}
             </>
           )}
+
+          {/* {(isPopular || isPremium) && (
+            <div className="flex items-center gap-3">
+              <Check className="w-5 h-5 text-green-600" />
+              <span className="text-sm text-gray-700">
+                Free same-day delivery
+              </span>
+            </div>
+          )} */}
 
           <div className="flex items-center gap-3">
             <Check className="w-5 h-5 text-green-600" />
@@ -272,49 +243,39 @@ export const PlanCard: React.FC<PlanCardProps> = ({
           </div>
         )}
 
-        {!isPopular && !isPremium && (
-          <div className="bg-cyan-50 border border-cyan-200 rounded-lg p-3">
-            <p className="text-sm text-cyan-800 font-medium">
-              💰 Great starter plan
+        {/* {isPremium && (
+          <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+            <p className="text-sm text-purple-800 font-medium">
+              🎁 Includes premium toys worth ₸50,000+
             </p>
           </div>
-        )}
+        )} */}
 
         {/* Action Button */}
-        <div className="mt-auto">
-          <Button
-            onClick={handleSelect}
-            disabled={isCurrentPlan || loading}
-            variant={getButtonVariant()}
-            className={`w-full ${
-              isPremium && !isCurrentPlan
-                ? "bg-purple-600 hover:bg-purple-700"
-                : isPopular && !isCurrentPlan
-                ? "bg-blue-600 hover:bg-blue-700"
-                : "bg-cyan-600 hover:bg-cyan-700"
-            }`}
-          >
-            {getButtonIcon()}
-            {getButtonText()}
-            {!isCurrentPlan && !isAuthenticated && !loading && (
-              <ArrowRight className="w-4 h-4 ml-2" />
-            )}
-          </Button>
-
-          {/* Additional info for unauthenticated users */}
-          {!isAuthenticated && (
-            <p className="text-xs text-gray-500 text-center mt-2">
-              Create an account to start your subscription
-            </p>
+        <Button
+          onClick={handleSelect}
+          disabled={isCurrentPlan}
+          variant={getButtonVariant()}
+          className={`w-full ${
+            isPremium && !isCurrentPlan
+              ? "bg-purple-600 hover:bg-purple-700"
+              : isPopular && !isCurrentPlan
+              ? "bg-blue-600 hover:bg-blue-700"
+              : ""
+          }`}
+        >
+          {getButtonText()}
+          {!isCurrentPlan && !isAuthenticated && (
+            <ArrowRight className="w-4 h-4 ml-2" />
           )}
+        </Button>
 
-          {/* Change plan info for subscribed users */}
-          {isAuthenticated && hasActiveSubscription && !isCurrentPlan && (
-            <p className="text-xs text-gray-500 text-center mt-2">
-              Your current plan will be updated immediately
-            </p>
-          )}
-        </div>
+        {/* Additional info for unauthenticated users */}
+        {!isAuthenticated && (
+          <p className="text-xs text-gray-500 text-center">
+            Create an account to start your subscription
+          </p>
+        )}
       </CardContent>
     </Card>
   );

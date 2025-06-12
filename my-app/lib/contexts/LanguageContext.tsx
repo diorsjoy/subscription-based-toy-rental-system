@@ -109,9 +109,10 @@ const translations: Translations = {
       overdue: "Overdue",
     },
     membership: {
-      basic: "Basic",
+      starter: "Starter",
       premium: "Premium",
-      vip: "VIP",
+      family: "Family",
+      free: "Free",
     },
   },
   ru: {

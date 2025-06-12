@@ -435,26 +435,6 @@ export default function EnhancedBrowsePage() {
     }
   };
 
-  const handleQuickRent = async (toy: Toy) => {
-    try {
-      const success = await addItem(toy.id, 1); // Pass toyId and quantity
-      if (success) {
-        toast({
-          title: "Quick Rent Started! ⚡",
-          description: `${toy.title} - proceeding to checkout.`,
-        });
-        router.push("/checkout");
-      }
-    } catch (error) {
-      console.error("Failed to add to cart:", error);
-      toast({
-        title: "Error",
-        description: "Failed to add item to cart. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
   const toggleSkill = (skill: string) => {
     setSelectedSkills((prev) =>
       prev.includes(skill) ? prev.filter((s) => s !== skill) : [...prev, skill]
@@ -900,18 +880,6 @@ export default function EnhancedBrowsePage() {
                                 >
                                   Add to Cart
                                 </Button>
-                                <Button
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleQuickRent(toy);
-                                  }}
-                                  disabled={!toy.isAvailable}
-                                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-                                >
-                                  <Zap className="w-4 h-4 mr-1" />
-                                  Quick Rent
-                                </Button>
                               </div>
                             </CardFooter>
                           </Card>
@@ -1032,18 +1000,6 @@ export default function EnhancedBrowsePage() {
                                             disabled={!toy.isAvailable}
                                           >
                                             Add to Cart
-                                          </Button>
-                                          <Button
-                                            size="sm"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              handleQuickRent(toy);
-                                            }}
-                                            disabled={!toy.isAvailable}
-                                            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-                                          >
-                                            <Zap className="w-4 h-4 mr-1" />
-                                            Quick Rent
                                           </Button>
                                         </div>
                                       </div>

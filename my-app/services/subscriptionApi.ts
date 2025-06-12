@@ -1,11 +1,10 @@
-// services/subscriptionApi.ts
 interface Plan {
   plan_id: number;
   name: string;
   description?: string;
   rental_limit: number;
   price: number;
-  duration: string;
+  duration: number;
 }
 
 interface Subscription {
@@ -20,19 +19,38 @@ interface SubscriptionStatus {
   sub_status: boolean;
 }
 
-interface ApiResponse<T> {
-  success: boolean;
-  data?: T;
-  message?: string;
-  status?: string;
+interface BackendPlan {
+  planId?: number;
+  plan_id?: number; // Support both formats
+  name: string;
+  description?: string;
+  rentalLimit?: number;
+  rental_limit?: number; // Support both formats
+  price: number;
+  duration: number;
 }
+
+interface BackendSubscription {
+  userId: string;
+  planId: number;
+  planName: string;
+  remainingLimit: number;
+  expiresAt: string;
+}
+
+// Centralized status mapping for your backend's string responses
+const STATUS_MAPPING = {
+  STATUS_OK: "STATUS_OK",
+  STATUS_SUBSCRIBED: "STATUS_SUBSCRIBED", // This is what your backend returns
+  STATUS_NOT_SUBSCRIBED: "STATUS_NOT_SUBSCRIBED",
+} as const;
 
 class SubscriptionApiService {
   private baseUrl: string;
 
   constructor() {
-    // Replace with your actual backend URL
-    this.baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:9090";
+    this.baseUrl =
+      process.env.NEXT_PUBLIC_GRPC_GATEWAY_URL_SUB || "http://localhost:9090";
   }
 
   private async makeRequest<T>(
@@ -50,76 +68,116 @@ class SubscriptionApiService {
       ...options,
     };
 
-    const response = await fetch(`${this.baseUrl}${endpoint}`, config);
+    try {
+      const response = await fetch(`${this.baseUrl}${endpoint}`, config);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(errorText || `HTTP error! status: ${response.status}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`API Error (${response.status}): ${errorText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error(`API request failed for ${endpoint}:`, error);
+      throw error;
     }
-
-    return response.json();
   }
 
   private getAuthToken(): string | null {
-    // Get token from localStorage, cookies, or your auth state management
     if (typeof window !== "undefined") {
       return localStorage.getItem("accessToken");
     }
     return null;
   }
 
-  // Get all available subscription plans
+  private validateStatusResponse(status: string, operation: string): boolean {
+    if (status === STATUS_MAPPING.STATUS_OK) {
+      return true;
+    }
+    throw new Error(`${operation} failed with status: ${status}`);
+  }
+
+  // Get all available subscription plans - Fixed for flexible response format
   async getPlans(): Promise<{ plans: Plan[] }> {
     try {
-      const response = await this.makeRequest<{ plans: Plan[] }>(
+      const response = await this.makeRequest<{ plans: BackendPlan[] }>(
         "/v1/subscription/plans"
       );
-      return response;
+
+      console.log("Raw plans response:", response);
+
+      // Map backend format to frontend format
+      const mappedPlans: Plan[] = (response.plans || []).map((plan) => ({
+        plan_id: plan.planId || plan.plan_id || 0,
+        name: plan.name,
+        description: plan.description,
+        rental_limit: plan.rentalLimit || plan.rental_limit || 0,
+        price: plan.price,
+        duration: plan.duration,
+      }));
+
+      console.log("Mapped plans:", mappedPlans);
+
+      return { plans: mappedPlans };
     } catch (error) {
       console.error("Error fetching plans:", error);
-      throw error;
+      throw new Error("Failed to load subscription plans");
     }
   }
 
-  // Check if user has an active subscription
+  // Check if user has an active subscription - FIXED FOR STRING STATUS
   async checkSubscription(): Promise<SubscriptionStatus> {
     try {
-      const response = await this.makeRequest<{ sub_status: string }>(
+      // Your backend returns: {subStatus: "STATUS_SUBSCRIBED"}
+      const response = await this.makeRequest<{ subStatus: string }>(
         "/v1/subscription/check"
       );
 
-      // Map the backend response to expected format
+      console.log("Raw subscription check response:", response);
+
+      // Convert string status to boolean
+      const isSubscribed =
+        response.subStatus === STATUS_MAPPING.STATUS_SUBSCRIBED;
+
+      console.log("Parsed subscription status:", {
+        rawStatus: response.subStatus,
+        isSubscribed,
+        expectedStatus: STATUS_MAPPING.STATUS_SUBSCRIBED,
+      });
+
       return {
-        sub_status: response.sub_status === "STATUS_SUBSCRIBED",
+        sub_status: isSubscribed,
       };
     } catch (error) {
       console.error("Error checking subscription:", error);
-      // Return false if user is not authenticated or has no subscription
       return { sub_status: false };
     }
   }
 
-  // Get current subscription details
+  // Get current subscription details - Fixed for camelCase response
   async getSubscriptionDetails(): Promise<Subscription> {
     try {
-      const response = await this.makeRequest<{
-        user_id: number;
-        plan_id: number;
-        plan_name: string;
-        remaining_limit: number;
-        expires_at: string;
-      }>("/v1/subscription/details");
+      const response = await this.makeRequest<BackendSubscription>(
+        "/v1/subscription"
+      );
 
-      return {
-        user_id: response.user_id,
-        plan_id: response.plan_id,
-        plan_name: response.plan_name,
-        remaining_limit: response.remaining_limit,
-        expires_at: response.expires_at,
+      console.log("Raw subscription details response:", response);
+
+      // Map camelCase response to snake_case interface
+      const mappedSubscription: Subscription = {
+        user_id: parseInt(response.userId), // Convert string to number
+        plan_id: response.planId,
+        plan_name: response.planName,
+        remaining_limit: response.remainingLimit,
+        expires_at: response.expiresAt,
       };
+
+      console.log("Mapped subscription:", mappedSubscription);
+
+      return mappedSubscription;
     } catch (error) {
       console.error("Error fetching subscription details:", error);
-      throw error;
+      throw new Error("Failed to load subscription details");
     }
   }
 
@@ -131,25 +189,28 @@ class SubscriptionApiService {
       const response = await this.makeRequest<{
         sub_id: number;
         status: string;
-      }>("/v1/subscription/subscribe", {
+      }>("/v1/subscription", {
         method: "POST",
         body: JSON.stringify({ plan_id: planId }),
       });
 
-      if (response.status === "STATUS_OK") {
-        return {
-          success: true,
-          message: "Subscription created successfully!",
-          sub_id: response.sub_id,
-        };
-      } else {
-        throw new Error("Subscription failed");
-      }
+      console.log("Subscribe response:", response);
+
+      this.validateStatusResponse(response.status, "Subscription");
+
+      return {
+        success: true,
+        message: "Subscription created successfully!",
+        sub_id: response.sub_id,
+      };
     } catch (error) {
       console.error("Error subscribing:", error);
-      throw new Error(
-        error instanceof Error ? error.message : "Subscription failed"
-      );
+      const message =
+        error instanceof Error ? error.message : "Subscription failed";
+      return {
+        success: false,
+        message,
+      };
     }
   }
 
@@ -159,26 +220,29 @@ class SubscriptionApiService {
   ): Promise<{ success: boolean; message: string }> {
     try {
       const response = await this.makeRequest<{ status: string }>(
-        "/v1/subscription/change-plan",
+        "/v1/subscription/plan",
         {
-          method: "POST",
+          method: "PUT",
           body: JSON.stringify({ new_plan_id: planId }),
         }
       );
 
-      if (response.status === "STATUS_OK") {
-        return {
-          success: true,
-          message: "Plan changed successfully!",
-        };
-      } else {
-        throw new Error("Plan change failed");
-      }
+      console.log("Change plan response:", response);
+
+      this.validateStatusResponse(response.status, "Plan change");
+
+      return {
+        success: true,
+        message: "Plan changed successfully!",
+      };
     } catch (error) {
       console.error("Error changing plan:", error);
-      throw new Error(
-        error instanceof Error ? error.message : "Plan change failed"
-      );
+      const message =
+        error instanceof Error ? error.message : "Plan change failed";
+      return {
+        success: false,
+        message,
+      };
     }
   }
 
@@ -186,29 +250,32 @@ class SubscriptionApiService {
   async unsubscribe(): Promise<{ success: boolean; message: string }> {
     try {
       const response = await this.makeRequest<{ status: string }>(
-        "/v1/subscription/unsubscribe",
+        "/v1/subscription",
         {
-          method: "POST",
+          method: "DELETE",
         }
       );
 
-      if (response.status === "STATUS_OK") {
-        return {
-          success: true,
-          message: "Successfully unsubscribed!",
-        };
-      } else {
-        throw new Error("Unsubscribe failed");
-      }
+      console.log("Unsubscribe response:", response);
+
+      this.validateStatusResponse(response.status, "Unsubscribe");
+
+      return {
+        success: true,
+        message: "Successfully unsubscribed!",
+      };
     } catch (error) {
       console.error("Error unsubscribing:", error);
-      throw new Error(
-        error instanceof Error ? error.message : "Unsubscribe failed"
-      );
+      const message =
+        error instanceof Error ? error.message : "Unsubscribe failed";
+      return {
+        success: false,
+        message,
+      };
     }
   }
 
-  // Extract from balance (for purchasing toys)
+  // Extract from balance - Fixed for your backend response format
   async extractFromBalance(value: number): Promise<{
     success: boolean;
     message: string;
@@ -216,32 +283,32 @@ class SubscriptionApiService {
   }> {
     try {
       const response = await this.makeRequest<{
-        op_status: string;
+        opStatus: string;
         msg: string;
         left: number;
-      }>("/v1/subscription/extract-balance", {
-        method: "POST",
+      }>("/v1/subscription/extract", {
+        method: "PATCH",
         body: JSON.stringify({ value }),
       });
 
-      if (response.op_status === "STATUS_OK") {
-        return {
-          success: true,
-          message: response.msg,
-          remaining: response.left,
-        };
-      } else {
-        throw new Error(response.msg || "Balance extraction failed");
-      }
+      console.log("Extract balance response:", response);
+
+      this.validateStatusResponse(response.opStatus, "Balance extraction");
+
+      return {
+        success: true,
+        message: response.msg,
+        remaining: response.left,
+      };
     } catch (error) {
       console.error("Error extracting from balance:", error);
-      throw new Error(
-        error instanceof Error ? error.message : "Balance extraction failed"
-      );
+      const message =
+        error instanceof Error ? error.message : "Balance extraction failed";
+      throw new Error(message);
     }
   }
 
-  // Add to balance (for refunds or credits)
+  // Add to balance - Fixed for your backend response format
   async addToBalance(value: number): Promise<{
     success: boolean;
     message: string;
@@ -249,33 +316,33 @@ class SubscriptionApiService {
   }> {
     try {
       const response = await this.makeRequest<{
-        op_status: string;
+        opStatus: string;
         msg: string;
         left: number;
-      }>("/v1/subscription/add-balance", {
-        method: "POST",
+      }>("/v1/subscription/add", {
+        method: "PATCH",
         body: JSON.stringify({ value }),
       });
 
-      if (response.op_status === "STATUS_OK") {
-        return {
-          success: true,
-          message: response.msg,
-          remaining: response.left,
-        };
-      } else {
-        throw new Error(response.msg || "Balance addition failed");
-      }
+      console.log("Add balance response:", response);
+
+      this.validateStatusResponse(response.opStatus, "Balance addition");
+
+      return {
+        success: true,
+        message: response.msg,
+        remaining: response.left,
+      };
     } catch (error) {
       console.error("Error adding to balance:", error);
-      throw new Error(
-        error instanceof Error ? error.message : "Balance addition failed"
-      );
+      const message =
+        error instanceof Error ? error.message : "Balance addition failed";
+      throw new Error(message);
     }
   }
 }
 
-// Create and export a singleton instance
+// Create and export singleton instance
 export const subscriptionApi = new SubscriptionApiService();
 
 // Export types for use in components

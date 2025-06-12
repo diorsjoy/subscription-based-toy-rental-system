@@ -173,18 +173,6 @@ function ToyDetailsContent() {
     });
   };
 
-  const handleQuickRent = () => {
-    if (!toy) return;
-
-    handleAddToCart();
-    toast({
-      title: "Quick Rent Started! ⚡",
-      description: `${toy.title} - proceeding to checkout.`,
-    });
-
-    router.push("/checkout");
-  };
-
   const toggleWishlist = () => {
     if (!toy) return;
 
@@ -521,15 +509,6 @@ function ToyDetailsContent() {
                   >
                     <ShoppingCart className="w-4 h-4 mr-2" />
                     Add to Cart
-                  </Button>
-
-                  <Button
-                    onClick={handleQuickRent}
-                    disabled={!toy.isAvailable}
-                    className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-                  >
-                    <Zap className="w-4 h-4 mr-2" />
-                    Quick Rent
                   </Button>
                 </div>
 

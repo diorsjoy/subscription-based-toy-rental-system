@@ -1000,14 +1000,6 @@ const ToysAdminPanel: React.FC = () => {
             </button>
           </div>
         </div>
-
-        {/* Debug Info */}
-        <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
-          <strong>Debug:</strong> Form visible: {showAddForm ? "Yes" : "No"} |
-          Authenticated: {isAuthenticated ? "Yes" : "No"} | Loading:{" "}
-          {loading ? "Yes" : "No"} | Toys count: {toys.length} | Available toys:{" "}
-          {toys.filter((t) => t.isAvailable).length}
-        </div>
       </div>
 
       {/* Filters */}

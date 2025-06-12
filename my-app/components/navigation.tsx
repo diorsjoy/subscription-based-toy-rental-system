@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useAuth } from "@/lib/contexts/AuthContext";
+import { useSubscription } from "@/hooks/useSubscription";
 import useTranslation from "@/hooks/useTranslation";
 import LanguageSwitcher from "@/components/language/LanguageSwitcher";
 import Image from "next/image";
@@ -27,11 +28,20 @@ import {
   Star,
   Coins,
   Package,
+  Crown,
+  Clock,
+  AlertCircle,
+  Shield,
 } from "lucide-react";
 
 export function Navigation() {
   const [isOpen, setIsOpen] = useState(false);
-  const { user, isAuthenticated, logout, isLoading } = useAuth();
+  const { user, isAuthenticated, logout, isLoading, isAdmin } = useAuth();
+  const {
+    subscription,
+    isSubscribed,
+    loading: subscriptionLoading,
+  } = useSubscription();
   const { t, currentLanguage } = useTranslation();
 
   const navItems = [
@@ -43,19 +53,10 @@ export function Navigation() {
   const userMenuItems = [
     { name: t("nav.profile"), href: "/profile", icon: User, key: "profile" },
     { name: t("nav.rentals"), href: "/rentals", icon: Package, key: "rentals" },
-    // {
-    //   name: t("nav.wishlist"),
-    //   href: "/wishlist",
-    //   icon: Heart,
-    //   key: "wishlist",
-    // },
     { name: t("nav.tokens"), href: "/tokens", icon: Coins, key: "tokens" },
-    {
-      name: t("nav.settings"),
-      href: "/settings",
-      icon: Settings,
-      key: "settings",
-    },
+    ...(isAdmin()
+      ? [{ name: "Admin Panel", href: "/admin", icon: Shield, key: "admin" }]
+      : []),
   ];
 
   const handleLogout = async () => {
@@ -66,25 +67,90 @@ export function Navigation() {
     }
   };
 
-  const getMembershipColor = (tier?: string) => {
-    switch (tier) {
-      case "Premium":
-        return "bg-gradient-to-r from-purple-500 to-pink-500";
-      case "VIP":
-        return "bg-gradient-to-r from-yellow-400 to-orange-500";
-      default:
-        return "bg-gradient-to-r from-blue-500 to-indigo-600";
+  // Get subscription-based membership info
+  const getSubscriptionInfo = () => {
+    if (!isAuthenticated || subscriptionLoading) {
+      return {
+        tier: "Free",
+        color: "bg-gradient-to-r from-gray-400 to-gray-500",
+        icon: User,
+        tokens: 0,
+        status: "loading",
+      };
+    }
+
+    if (!isSubscribed || !subscription) {
+      return {
+        tier: "Free",
+        color: "bg-gradient-to-r from-gray-400 to-gray-500",
+        icon: User,
+        tokens: 0,
+        status: "free",
+      };
+    }
+
+    // Map plan names to display info
+    const planName = subscription.plan_name.toLowerCase();
+    if (planName.includes("premium") || planName.includes("ultimate")) {
+      return {
+        tier: subscription.plan_name,
+        color: "bg-gradient-to-r from-purple-500 to-pink-500",
+        icon: Crown,
+        tokens: subscription.remaining_limit,
+        status: "premium",
+      };
+    } else if (planName.includes("family")) {
+      return {
+        tier: subscription.plan_name,
+        color: "bg-gradient-to-r from-blue-500 to-indigo-600",
+        icon: Star,
+        tokens: subscription.remaining_limit,
+        status: "family",
+      };
+    } else {
+      return {
+        tier: subscription.plan_name,
+        color: "bg-gradient-to-r from-green-500 to-emerald-600",
+        icon: Package,
+        tokens: subscription.remaining_limit,
+        status: "basic",
+      };
     }
   };
 
-  const getMembershipTierTranslation = (tier?: string) => {
-    switch (tier) {
-      case "Premium":
+  const subscriptionInfo = getSubscriptionInfo();
+
+  // Format expiry date
+  const getExpiryInfo = () => {
+    if (!subscription) return null;
+
+    const expiryDate = new Date(subscription.expires_at);
+    const now = new Date();
+    const daysUntilExpiry = Math.ceil(
+      (expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+    );
+
+    return {
+      date: expiryDate.toLocaleDateString(),
+      daysLeft: daysUntilExpiry,
+      isExpiringSoon: daysUntilExpiry <= 7,
+    };
+  };
+
+  const expiryInfo = getExpiryInfo();
+
+  const getMembershipTierTranslation = (tier: string) => {
+    switch (tier.toLowerCase()) {
+      case "premium":
         return t("membership.premium");
-      case "VIP":
-        return t("membership.vip");
-      default:
+      case "family":
+        return t("membership.family");
+      case "basic":
         return t("membership.basic");
+      case "free":
+        return t("membership.free");
+      default:
+        return tier;
     }
   };
 
@@ -143,9 +209,10 @@ export function Navigation() {
                     </div>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-64" align="end" forceMount>
+                <DropdownMenuContent className="w-80" align="end" forceMount>
                   <DropdownMenuLabel className="font-normal">
-                    <div className="flex flex-col space-y-2">
+                    <div className="flex flex-col space-y-3">
+                      {/* User Info */}
                       <div className="flex items-center space-x-2">
                         <div className="flex items-center justify-center w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full text-white text-sm font-semibold">
                           {user.firstName?.[0] || user.email[0].toUpperCase()}
@@ -159,23 +226,50 @@ export function Navigation() {
                           <p className="text-xs leading-none text-muted-foreground mt-1">
                             {user.email}
                           </p>
+                          {isAdmin() && (
+                            <Badge variant="outline" className="text-xs mt-1">
+                              <Shield className="w-3 h-3 mr-1" />
+                              Admin
+                            </Badge>
+                          )}
                         </div>
                       </div>
 
-                      {/* Membership and Token Info */}
-                      <div className="flex items-center justify-between">
-                        <Badge
-                          className={`text-white ${getMembershipColor(
-                            user.membershipTier
-                          )}`}
-                        >
-                          <Star className="w-3 h-3 mr-1" />
-                          {getMembershipTierTranslation(user.membershipTier)}
-                        </Badge>
-                        <div className="flex items-center text-sm text-gray-600">
-                          <Coins className="w-4 h-4 mr-1 text-yellow-500" />
-                          {user.tokensBalance || 0} {t("common.tokens")}
+                      {/* Subscription Status */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Badge
+                            className={`text-white ${subscriptionInfo.color}`}
+                          >
+                            <subscriptionInfo.icon className="w-3 h-3 mr-1" />
+                            {getMembershipTierTranslation(
+                              subscriptionInfo.tier
+                            )}
+                          </Badge>
+                          {subscriptionLoading ? (
+                            <div className="w-4 h-4 border border-gray-300 border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <div className="flex items-center text-sm text-gray-600">
+                              <Coins className="w-4 h-4 mr-1 text-yellow-500" />
+                              {subscriptionInfo.tokens}{" "}
+                              {isSubscribed ? "rentals" : "tokens"}
+                            </div>
+                          )}
                         </div>
+
+                        {/* Subscription Details */}
+
+                        {/* No subscription message */}
+                        {!isSubscribed && !subscriptionLoading && (
+                          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2">
+                            <p className="text-xs text-yellow-800">
+                              No active subscription.
+                              <Link href="/pricing" className="underline ml-1">
+                                Choose a plan
+                              </Link>
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </DropdownMenuLabel>
@@ -184,17 +278,52 @@ export function Navigation() {
 
                   {userMenuItems.map((item) => (
                     <DropdownMenuItem key={item.key} asChild>
-                      <Link href={item.href} className="flex items-center">
+                      <Link
+                        href={item.href}
+                        className={`flex items-center ${
+                          item.key === "admin"
+                            ? "text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                            : ""
+                        }`}
+                      >
                         <item.icon className="mr-2 h-4 w-4" />
                         <span>{item.name}</span>
                         {item.key === "tokens" && (
                           <Badge variant="secondary" className="ml-auto">
-                            {user.tokensBalance || 0}
+                            {subscriptionInfo.tokens}
                           </Badge>
+                        )}
+                        {item.key === "admin" && (
+                          <Crown className="w-3 h-3 ml-auto text-purple-500" />
                         )}
                       </Link>
                     </DropdownMenuItem>
                   ))}
+
+                  <DropdownMenuSeparator />
+
+                  {/* Quick Actions */}
+                  {isSubscribed ? (
+                    <DropdownMenuItem asChild>
+                      <Link
+                        href="/profile?tab=manage"
+                        className="flex items-center text-blue-600"
+                      >
+                        <Settings className="mr-2 h-4 w-4" />
+                        <span>Manage Subscription</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  ) : (
+                    <DropdownMenuItem asChild>
+                      <Link
+                        href="/pricing"
+                        className="flex items-center text-green-600"
+                      >
+                        <Star className="mr-2 h-4 w-4" />
+                        <span>Subscribe Now</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
 
                   <DropdownMenuSeparator />
 
@@ -231,29 +360,61 @@ export function Navigation() {
                 <div className="flex flex-col space-y-6 mt-6">
                   {/* User info in mobile */}
                   {isAuthenticated && user && (
-                    <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-lg">
-                      <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full text-white font-semibold">
-                        {user.firstName?.[0] || user.email[0].toUpperCase()}
+                    <div className="flex flex-col space-y-3 p-4 bg-gray-50 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full text-white font-semibold">
+                          {user.firstName?.[0] || user.email[0].toUpperCase()}
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium">
+                            {user.firstName && user.lastName
+                              ? `${user.firstName} ${user.lastName}`
+                              : user.email}
+                          </p>
+                          <p className="text-xs text-gray-500">{user.email}</p>
+                        </div>
                       </div>
-                      <div className="flex-1">
-                        <p className="font-medium">
-                          {user.firstName && user.lastName
-                            ? `${user.firstName} ${user.lastName}`
-                            : user.email}
-                        </p>
-                        <div className="flex items-center justify-between mt-1">
+
+                      {/* Mobile Subscription Info */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
                           <Badge
-                            className={`text-white text-xs ${getMembershipColor(
-                              user.membershipTier
-                            )}`}
+                            className={`text-white text-xs ${subscriptionInfo.color}`}
                           >
-                            {getMembershipTierTranslation(user.membershipTier)}
+                            <subscriptionInfo.icon className="w-3 h-3 mr-1" />
+                            {getMembershipTierTranslation(
+                              subscriptionInfo.tier
+                            )}
                           </Badge>
                           <div className="flex items-center text-sm text-gray-600">
                             <Coins className="w-4 h-4 mr-1 text-yellow-500" />
-                            {user.tokensBalance || 0}
+                            {subscriptionInfo.tokens}
                           </div>
                         </div>
+
+                        {isSubscribed && subscription && expiryInfo && (
+                          <div className="text-xs text-gray-500">
+                            <div className="flex justify-between">
+                              <span>Expires: {expiryInfo.date}</span>
+                              {expiryInfo.isExpiringSoon && (
+                                <span className="text-red-600">
+                                  {expiryInfo.daysLeft} days left
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {!isSubscribed && !subscriptionLoading && (
+                          <Link
+                            href="/pricing"
+                            onClick={() => setIsOpen(false)}
+                          >
+                            <Button size="sm" className="w-full">
+                              Subscribe Now
+                            </Button>
+                          </Link>
+                        )}
                       </div>
                     </div>
                   )}
@@ -281,15 +442,22 @@ export function Navigation() {
                             <Link
                               key={item.key}
                               href={item.href}
-                              className="flex items-center px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md transition-colors"
+                              className={`flex items-center px-3 py-2 text-base font-medium rounded-md transition-colors ${
+                                item.key === "admin"
+                                  ? "text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                                  : "text-gray-700 hover:text-blue-600 hover:bg-gray-50"
+                              }`}
                               onClick={() => setIsOpen(false)}
                             >
                               <item.icon className="mr-3 h-5 w-5" />
                               {item.name}
                               {item.key === "tokens" && (
                                 <Badge variant="secondary" className="ml-auto">
-                                  {user.tokensBalance || 0}
+                                  {subscriptionInfo.tokens}
                                 </Badge>
+                              )}
+                              {item.key === "admin" && (
+                                <Crown className="w-4 h-4 ml-auto text-purple-500" />
                               )}
                             </Link>
                           ))}

@@ -1,10 +1,8 @@
-// components/subscription/SubscriptionFlow.tsx
 "use client";
 
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   CreditCard,
   Check,
@@ -13,19 +11,17 @@ import {
   Clock,
   Users,
   Zap,
-  RefreshCw,
-  AlertCircle,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { formatDuration } from "@/types/subscription";
 
-// Updated interface to match your API
 interface Plan {
-  plan_id: number;
+  planId: number; // Backend uses camelCase
   name: string;
-  description?: string;
-  rental_limit: number;
+  description: string;
+  rentalLimit: number; // Backend uses camelCase
   price: number;
-  duration: number; // Changed from string to number
+  duration: string | number;
 }
 
 interface SubscriptionFlowProps {
@@ -48,24 +44,7 @@ export const SubscriptionFlow: React.FC<SubscriptionFlowProps> = ({
   >("confirm");
   const [paymentMethod, setPaymentMethod] = useState<"kaspi" | "card">("kaspi");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
-
-  // Fixed duration formatting for number input
-  const formatDuration = (duration: number): string => {
-    switch (duration) {
-      case 1:
-        return "1 month";
-      case 3:
-        return "3 months";
-      case 6:
-        return "6 months";
-      case 12:
-        return "1 year";
-      default:
-        return `${duration} months`;
-    }
-  };
 
   const handleConfirm = async () => {
     if (!isAuthenticated) {
@@ -79,31 +58,21 @@ export const SubscriptionFlow: React.FC<SubscriptionFlowProps> = ({
   const handlePayment = async () => {
     setStep("processing");
     setLoading(true);
-    setError(null);
 
     try {
-      console.log("Processing payment for plan:", selectedPlan);
-      console.log("Plan ID being sent:", selectedPlan.plan_id);
-
-      // Simulate payment processing delay
+      // Simulate payment processing
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
-      const success = await onConfirm(selectedPlan.plan_id);
-      console.log("Payment confirmation result:", success);
+      const success = await onConfirm(selectedPlan.planId);
 
       if (success) {
         setStep("success");
       } else {
-        setError("Failed to process subscription. Please try again.");
         setStep("payment");
+        // Error handling would be done in the parent component
       }
     } catch (error) {
-      console.error("Payment processing error:", error);
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "An unexpected error occurred during payment processing";
-      setError(errorMessage);
+      console.error("Payment error:", error);
       setStep("payment");
     } finally {
       setLoading(false);
@@ -131,26 +100,26 @@ export const SubscriptionFlow: React.FC<SubscriptionFlowProps> = ({
               <h3 className="text-xl font-bold text-blue-900">
                 {selectedPlan.name}
               </h3>
-              {selectedPlan.description && (
-                <p className="text-blue-700">{selectedPlan.description}</p>
-              )}
+              <p className="text-blue-700">{selectedPlan.description}</p>
             </div>
             <div className="text-right">
               <div className="text-2xl font-bold text-blue-900">
                 ₸{selectedPlan.price.toLocaleString()}
               </div>
-              <div className="text-sm text-blue-700">per month</div>
+              <div className="text-sm text-blue-700">
+                per {formatDuration(selectedPlan.duration)}
+              </div>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div className="flex items-center gap-2">
               <Users className="w-4 h-4 text-blue-600" />
-              <span>{selectedPlan.rental_limit} rentals</span>
+              <span>{selectedPlan.rentalLimit} rentals</span>
             </div>
             <div className="flex items-center gap-2">
               <Clock className="w-4 h-4 text-blue-600" />
-              <span>Monthly</span>
+              <span>{formatDuration(selectedPlan.duration)}duration</span>
             </div>
             <div className="flex items-center gap-2">
               <Zap className="w-4 h-4 text-blue-600" />
@@ -176,18 +145,6 @@ export const SubscriptionFlow: React.FC<SubscriptionFlowProps> = ({
         </ul>
       </div>
 
-      {/* Warning for plan changes */}
-      {hasCurrentSubscription && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <h4 className="font-semibold text-yellow-800 mb-2">Important:</h4>
-          <p className="text-sm text-yellow-700">
-            Your current plan will be immediately replaced with the new plan.
-            The change takes effect right away and you'll be charged the new
-            plan price.
-          </p>
-        </div>
-      )}
-
       {/* Action Buttons */}
       <div className="flex gap-4">
         <Button variant="outline" onClick={onBack} className="flex-1">
@@ -210,29 +167,9 @@ export const SubscriptionFlow: React.FC<SubscriptionFlowProps> = ({
       <div className="text-center">
         <h2 className="text-2xl font-bold mb-2">Choose Payment Method</h2>
         <p className="text-gray-600">
-          Complete your{" "}
-          {hasCurrentSubscription ? "plan change" : "subscription"} with secure
-          payment
+          Complete your subscription with secure payment
         </p>
       </div>
-
-      {/* Error message */}
-      {error && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            {error}
-            <Button
-              variant="outline"
-              size="sm"
-              className="ml-4"
-              onClick={() => setError(null)}
-            >
-              Dismiss
-            </Button>
-          </AlertDescription>
-        </Alert>
-      )}
 
       {/* Payment Methods */}
       <div className="space-y-3">
@@ -296,10 +233,6 @@ export const SubscriptionFlow: React.FC<SubscriptionFlowProps> = ({
             <span>₸{selectedPlan.price.toLocaleString()}</span>
           </div>
           <div className="flex justify-between text-sm text-gray-600">
-            <span>Duration: {formatDuration(selectedPlan.duration)}</span>
-            <span>{selectedPlan.rental_limit} rentals</span>
-          </div>
-          <div className="flex justify-between text-sm text-gray-600">
             <span>Processing fee</span>
             <span>Free</span>
           </div>
@@ -317,20 +250,13 @@ export const SubscriptionFlow: React.FC<SubscriptionFlowProps> = ({
           variant="outline"
           onClick={() => setStep("confirm")}
           className="flex-1"
-          disabled={loading}
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back
         </Button>
         <Button onClick={handlePayment} className="flex-1" disabled={loading}>
-          {loading ? (
-            <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-          ) : (
-            <CreditCard className="w-4 h-4 mr-2" />
-          )}
-          {loading
-            ? "Processing..."
-            : `Pay ₸${selectedPlan.price.toLocaleString()}`}
+          <CreditCard className="w-4 h-4 mr-2" />
+          Pay ₸{selectedPlan.price.toLocaleString()}
         </Button>
       </div>
     </div>
@@ -344,11 +270,7 @@ export const SubscriptionFlow: React.FC<SubscriptionFlowProps> = ({
       <div>
         <h2 className="text-2xl font-bold mb-2">Processing Payment</h2>
         <p className="text-gray-600">
-          Please wait while we process your{" "}
-          {hasCurrentSubscription ? "plan change" : "subscription"}...
-        </p>
-        <p className="text-sm text-gray-500 mt-2">
-          Plan: {selectedPlan.name} (ID: {selectedPlan.plan_id})
+          Please wait while we process your payment...
         </p>
       </div>
     </div>

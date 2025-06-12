@@ -1,64 +1,94 @@
-// components/subscription/SubscriptionPlans.tsx
+// components/subscription/SubscriptionPlans.tsx - Complete component
 "use client";
 
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, ArrowLeft, AlertCircle } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/lib/contexts/AuthContext";
-import { useSubscription } from "@/hooks/useSubscription";
-import { useToast } from "@/hooks/use-toast";
-
-// Import the updated components
+import { Loader2, ArrowLeft } from "lucide-react";
 import { PlanCard } from "./PlanCard";
-import { SubscriptionFlow } from "./SubscriptionFlow";
+import { SubscriptionFlow } from "./SubscriptionFlow"; // Make sure this imports the fixed version
+import { useRouter } from "next/navigation";
+import { subscriptionApi } from "@/services/subscriptionApi";
 
 interface Plan {
-  plan_id: number;
+  planId: number; // Backend uses camelCase
   name: string;
-  description?: string;
-  rental_limit: number;
+  description: string;
+  rentalLimit: number; // Backend uses camelCase
   price: number;
-  duration: string;
+  duration: string | number;
+}
+
+interface Subscription {
+  user_id: number;
+  planId: number;
+  plan_name: string;
+  remaining_limit: number;
+  expires_at: string;
+}
+
+interface SubscriptionStatus {
+  sub_status: boolean;
 }
 
 export const SubscriptionPlans: React.FC = () => {
-  const router = useRouter();
-  const { toast } = useToast();
-  const { isAuthenticated } = useAuth();
-  const {
-    subscription,
-    plans,
-    loading,
-    error,
-    isSubscribed,
-    subscribe,
-    changePlan,
-    refreshSubscription,
-    loadPlans,
-  } = useSubscription();
-
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [currentSubscription, setCurrentSubscription] =
+    useState<Subscription | null>(null);
+  const [loading, setLoading] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [showFlow, setShowFlow] = useState(false);
-  const [actionLoading, setActionLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Mock authentication state - replace with your actual auth hook
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
-    // Load plans if not already loaded
-    if (plans.length === 0) {
-      loadPlans();
+    loadData();
+    // Simulate checking auth state
+    const checkAuth = () => {
+      const token = localStorage.getItem("accessToken");
+      setIsAuthenticated(!!token);
+    };
+    checkAuth();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const [plansResponse, subscriptionStatus] = await Promise.all([
+        subscriptionApi.getPlans(),
+        subscriptionApi.checkSubscription(),
+      ]);
+
+      setPlans(plansResponse.plans);
+
+      if (subscriptionStatus.sub_status) {
+        const subscription = await subscriptionApi.getSubscriptionDetails();
+        setCurrentSubscription(subscription);
+      } else {
+        setCurrentSubscription(null);
+      }
+    } catch (error) {
+      console.error("Error loading subscription data:", error);
+      setError("Failed to load subscription plans. Please try again.");
+    } finally {
+      setLoading(false);
     }
-  }, [plans.length, loadPlans]);
+  };
 
   const handleSelectPlan = (planId: number) => {
     if (!isAuthenticated) {
-      router.push("/auth?redirect=/subscription");
+      // Redirect to auth page
+      router.push("/auth");
       return;
     }
 
-    const plan = plans.find((p) => p.plan_id === planId);
+    const plan = plans.find((p) => p.planId === planId);
     if (plan) {
       setSelectedPlan(plan);
       setShowFlow(true);
@@ -69,50 +99,24 @@ export const SubscriptionPlans: React.FC = () => {
     planId: number
   ): Promise<boolean> => {
     try {
-      setActionLoading(true);
-
-      let success = false;
-      let actionType = "";
-
-      if (isSubscribed) {
-        success = await changePlan(planId);
-        actionType = "plan change";
+      if (currentSubscription) {
+        const result = await subscriptionApi.changePlan(planId);
+        if (result.success) {
+          await loadData(); // Reload subscription data
+          return true;
+        }
       } else {
-        success = await subscribe(planId);
-        actionType = "subscription";
+        const result = await subscriptionApi.subscribe(planId);
+        if (result.success) {
+          await loadData(); // Reload subscription data
+          return true;
+        }
       }
-
-      if (success) {
-        toast({
-          title: isSubscribed
-            ? "Plan Changed Successfully"
-            : "Subscription Created",
-          description: isSubscribed
-            ? "Your plan has been updated successfully."
-            : "Welcome to Oiyn Shak! Your subscription is now active.",
-        });
-        return true;
-      } else {
-        toast({
-          title: "Action Failed",
-          description: `Failed to process ${actionType}. Please try again.`,
-          variant: "destructive",
-        });
-        return false;
-      }
-    } catch (error) {
-      console.error("Subscription action error:", error);
-      toast({
-        title: "Error",
-        description:
-          error instanceof Error
-            ? error.message
-            : "An unexpected error occurred",
-        variant: "destructive",
-      });
       return false;
-    } finally {
-      setActionLoading(false);
+    } catch (error) {
+      console.error("Subscription error:", error);
+      setError(error instanceof Error ? error.message : "Subscription failed");
+      return false;
     }
   };
 
@@ -121,16 +125,11 @@ export const SubscriptionPlans: React.FC = () => {
     setSelectedPlan(null);
   };
 
-  const handleRetry = () => {
-    refreshSubscription();
-    loadPlans();
-  };
-
   if (loading) {
     return (
       <div className="max-w-6xl mx-auto p-6">
         <div className="text-center py-12">
-          <Loader2 className="w-8 h-8 mx-auto animate-spin mb-4 text-blue-600" />
+          <Loader2 className="w-8 h-8 mx-auto animate-spin mb-4" />
           <p className="text-gray-600">Loading subscription plans...</p>
         </div>
       </div>
@@ -140,17 +139,14 @@ export const SubscriptionPlans: React.FC = () => {
   if (error) {
     return (
       <div className="max-w-6xl mx-auto p-6">
-        <Alert variant="destructive" className="mb-6">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            <div className="flex items-center justify-between">
-              <span>{error}</span>
-              <Button variant="outline" size="sm" onClick={handleRetry}>
-                Try Again
-              </Button>
-            </div>
-          </AlertDescription>
-        </Alert>
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="p-6 text-center">
+            <p className="text-red-800 mb-4">{error}</p>
+            <Button onClick={loadData} variant="outline">
+              Try Again
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -168,7 +164,7 @@ export const SubscriptionPlans: React.FC = () => {
         <SubscriptionFlow
           selectedPlan={selectedPlan}
           isAuthenticated={isAuthenticated}
-          hasCurrentSubscription={isSubscribed}
+          hasCurrentSubscription={!!currentSubscription}
           onBack={handleBackToPlans}
           onConfirm={handleConfirmSubscription}
         />
@@ -188,27 +184,27 @@ export const SubscriptionPlans: React.FC = () => {
       </div>
 
       {/* Current subscription banner */}
-      {isSubscribed && subscription && (
+      {currentSubscription && (
         <Card className="mb-8 border-green-200 bg-green-50">
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <span className="text-green-800">Current Subscription</span>
-              <Badge className="bg-green-600 text-white">Active</Badge>
+              <Badge className="bg-green-600">Active</Badge>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
               <div>
                 <span className="font-medium">Plan:</span>{" "}
-                {subscription.plan_name}
+                {currentSubscription.plan_name}
               </div>
               <div>
                 <span className="font-medium">Remaining:</span>{" "}
-                {subscription.remaining_limit} rentals
+                {currentSubscription.remaining_limit} rentals
               </div>
               <div>
                 <span className="font-medium">Expires:</span>{" "}
-                {new Date(subscription.expires_at).toLocaleDateString()}
+                {new Date(currentSubscription.expires_at).toLocaleDateString()}
               </div>
             </div>
           </CardContent>
@@ -227,7 +223,7 @@ export const SubscriptionPlans: React.FC = () => {
               start exploring our amazing toy collection.
             </p>
             <Button
-              onClick={() => router.push("/auth?redirect=/subscription")}
+              onClick={() => router.push("/auth")}
               className="bg-blue-600 hover:bg-blue-700"
             >
               Sign In / Sign Up
@@ -237,30 +233,17 @@ export const SubscriptionPlans: React.FC = () => {
       )}
 
       {/* Plans grid */}
-      {plans.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {plans.map((plan) => (
-            <PlanCard
-              key={plan.plan_id}
-              plan={plan}
-              isCurrentPlan={subscription?.plan_id === plan.plan_id}
-              isAuthenticated={isAuthenticated}
-              hasActiveSubscription={isSubscribed}
-              onSelect={handleSelectPlan}
-              loading={actionLoading}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="text-center py-12">
-          <p className="text-gray-600 mb-4">
-            No subscription plans available at the moment.
-          </p>
-          <Button variant="outline" onClick={handleRetry}>
-            Refresh Plans
-          </Button>
-        </div>
-      )}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {plans.map((plan) => (
+          <PlanCard
+            key={plan.planId}
+            plan={plan}
+            isCurrentPlan={currentSubscription?.planId === plan.planId}
+            isAuthenticated={isAuthenticated}
+            onSelect={handleSelectPlan}
+          />
+        ))}
+      </div>
 
       {/* Additional information */}
       <div className="mt-12 text-center">
@@ -316,8 +299,7 @@ export const SubscriptionPlans: React.FC = () => {
             <CardContent>
               <p className="text-gray-600">
                 Yes! You can upgrade or downgrade your plan at any time. Changes
-                take effect immediately and you'll be charged the new plan
-                price.
+                take effect at your next billing cycle.
               </p>
             </CardContent>
           </Card>
@@ -353,37 +335,13 @@ export const SubscriptionPlans: React.FC = () => {
             </CardHeader>
             <CardContent>
               <p className="text-gray-600">
-                Yes, you can cancel anytime from your profile. Your subscription
-                remains active until the end of your current billing period.
+                Yes, you can cancel anytime. Your subscription remains active
+                until the end of your current billing period.
               </p>
             </CardContent>
           </Card>
         </div>
       </div>
-
-      {/* Action Section */}
-      {isAuthenticated && (
-        <div className="mt-12 text-center">
-          <Card className="bg-blue-50 border-blue-200">
-            <CardContent className="p-6">
-              <h3 className="text-lg font-semibold text-blue-900 mb-2">
-                Need Help Choosing?
-              </h3>
-              <p className="text-blue-800 mb-4">
-                Visit your profile to manage your subscription.
-              </p>
-              <div className="flex gap-4 justify-center">
-                <Button
-                  variant="outline"
-                  onClick={() => router.push("/profile")}
-                >
-                  Go to Profile
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
     </div>
   );
 };

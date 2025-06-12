@@ -42,7 +42,7 @@ export const ToyCard: React.FC<ToyCardProps> = ({
     try {
       await addToBucket([
         {
-          toy_id: toy.id,
+          toy_id: toy_id,
           quantity: quantity,
         },
       ]);
